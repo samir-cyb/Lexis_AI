@@ -1,0 +1,202 @@
+/* ============================================
+   LexisAI — Mature Theme (10+ years old)
+   Sleek, professional, neon-accented
+   ============================================ */
+
+body.mature-theme {
+  --primary: #7B2FF7;
+  --primary-light: #9B59FF;
+  --primary-dark: #5A1FD4;
+  --secondary: #00D4FF;
+  --accent: #FF2D95;
+  --success: #00FF88;
+  --warning: #FFD700;
+  --danger: #FF4444;
+
+  --gradient-primary: linear-gradient(135deg, #7B2FF7, #00D4FF);
+  --gradient-accent: linear-gradient(135deg, #FF2D95, #FF6B35);
+  --gradient-dark: linear-gradient(135deg, #0a0a1e, #1a1a3e);
+  
+  --bg-primary: #0a0a1e;
+  --bg-secondary: #12122e;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --bg-glass: rgba(255, 255, 255, 0.08);
+
+  --shadow-glow: 0 0 20px rgba(123, 47, 247, 0.3);
+  --shadow-glow-secondary: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+body.mature-theme .nav-logo-icon {
+  box-shadow: 0 0 15px rgba(123, 47, 247, 0.4);
+}
+
+/* Neon accent lines */
+body.mature-theme .glass-card {
+  border-color: rgba(123, 47, 247, 0.15);
+}
+
+body.mature-theme .glass-card:hover {
+  border-color: rgba(123, 47, 247, 0.3);
+}
+
+/* Data-focused stat cards */
+body.mature-theme .stat-card {
+  border-left: 3px solid transparent;
+  background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(123,47,247,0.05));
+}
+
+body.mature-theme .stat-card:nth-child(1) { border-left-color: var(--primary); }
+body.mature-theme .stat-card:nth-child(2) { border-left-color: var(--secondary); }
+body.mature-theme .stat-card:nth-child(3) { border-left-color: var(--accent); }
+body.mature-theme .stat-card:nth-child(4) { border-left-color: var(--success); }
+
+body.mature-theme .stat-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Professional game cards */
+body.mature-theme .game-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(123,47,247,0.05));
+  border: 1px solid rgba(123, 47, 247, 0.15);
+}
+
+body.mature-theme .game-card:hover {
+  border-color: var(--primary);
+  background: linear-gradient(135deg, rgba(123,47,247,0.1), rgba(0,212,255,0.05));
+  box-shadow: 0 0 20px rgba(123, 47, 247, 0.2);
+}
+
+body.mature-theme .game-card .game-icon {
+  font-size: 1.8rem;
+}
+
+/* Progress bar */
+.progress-mature {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.progress-mature-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gradient-primary);
+  transition: width var(--transition-slow);
+}
+
+/* Accuracy meter */
+.accuracy-meter {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.accuracy-meter svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.accuracy-meter circle {
+  fill: none;
+  stroke-width: 8;
+  stroke-linecap: round;
+}
+
+.accuracy-meter .bg {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+
+.accuracy-meter .fill {
+  stroke: url(#matureGradient);
+  transition: stroke-dashoffset 1s ease;
+}
+
+.accuracy-meter .value {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Keyboard shortcut hints */
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-muted);
+}
+
+/* Graph / chart container */
+.chart-container {
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Session history table */
+.session-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.session-table th {
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.session-table td {
+  padding: var(--space-md);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.session-table tr:hover td {
+  background: rgba(123, 47, 247, 0.05);
+}
+
+/* Developer mode indicator */
+.dev-badge {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 217, 61, 0.15);
+  border: 1px solid rgba(255, 217, 61, 0.3);
+  color: #FFD700;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  z-index: 9999;
+  display: none;
+}
+
+.dev-badge.visible {
+  display: block;
+}

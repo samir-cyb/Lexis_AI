@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="i18n-title" content="app_name">
+  <title>Dashboard — LexisAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mature-theme.css">
+  <link rel="stylesheet" href="css/kid-theme.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+</head>
+<body class="mature-theme">
+
+  <!-- Navigation -->
+  <nav class="navbar scrolled">
+    <div class="container">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">🎙</div>
+        <span data-i18n="app_name">LexisAI</span>
+      </a>
+      
+      <ul class="nav-links" id="navLinks">
+        <li><a href="dashboard.html" class="active" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li><a href="practice.html" data-i18n="practice_title">Practice</a></li>
+        <li><a href="profile.html" data-i18n="nav_profile">Profile</a></li>
+        <li><a href="#" onclick="Auth.signOut()" data-i18n="nav_logout">Log Out</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <button class="lang-switch active" data-lang="en">EN</button>
+        <button class="lang-switch" data-lang="bn">বাং</button>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Dashboard Content -->
+  <div class="dashboard-page">
+    <div class="container">
+      <!-- Header -->
+      <div class="dashboard-header">
+        <div class="dashboard-welcome">
+          <h1 data-i18n="dashboard_welcome">Welcome back</h1>
+          <p id="userGreeting" data-i18n="dashboard_daily">Daily Progress</p>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:center;">
+          <div id="dailyLimitBadge" class="glass-card" style="padding:8px 16px;border-radius:20px;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--success);"></span>
+            <span id="exercisesLeft">3 exercises left today</span>
+          </div>
+          <a href="practice.html" class="btn btn-primary" data-i18n="dashboard_start">Start Practice</a>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card glass-card">
+          <div class="stat-value text-gradient" id="statAccuracy">72%</div>
+          <div class="stat-label" data-i18n="dashboard_accuracy">Accuracy</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-value text-gradient" id="statStreak" style="background:linear-gradient(135deg,#FF2D95,#FF6B35);-webkit-background-clip:text;">5</div>
+          <div class="stat-label" data-i18n="dashboard_streak">Day Streak</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-value text-gradient" id="statTotal" style="background:linear-gradient(135deg,#00FF88,#00D4FF);-webkit-background-clip:text;">24</div>
+          <div class="stat-label" data-i18n="dashboard_total">Total Sessions</div>
+        </div>
+        <div class="stat-card glass-card">
+          <div class="stat-value text-gradient" id="statTime" style="background:linear-gradient(135deg,#FFD700,#FF6B35);-webkit-background-clip:text;">45m</div>
+          <div class="stat-label">Practice Time</div>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div class="dashboard-grid">
+        <!-- Game Selector -->
+        <div>
+          <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:1.5rem;" data-i18n="feat_game_title">Phonetic Game Sandbox</h3>
+          <div class="game-selector">
+            <div class="game-card glass-card" onclick="startGame('syllable_jump')">
+              <div class="game-icon">🏃</div>
+              <h4 data-i18n="game_syllable_jump">Syllable Jump</h4>
+              <p>Jump over obstacles with your voice</p>
+            </div>
+            <div class="game-card glass-card" onclick="startGame('vowel_chain')">
+              <div class="game-icon">🔗</div>
+              <h4 data-i18n="game_vowel_chain">Vowel Chain</h4>
+              <p>Light up orbs by speaking vowels</p>
+            </div>
+            <div class="game-card glass-card" onclick="startGame('word_match')">
+              <div class="game-icon">🎯</div>
+              <h4 data-i18n="game_word_match">Word Match</h4>
+              <p>Speak words to match the cards</p>
+            </div>
+            <div class="game-card glass-card" onclick="startGame('pronunciation_race')">
+              <div class="game-icon">🏎️</div>
+              <h4 data-i18n="game_pronunciation_race">Pronunciation Race</h4>
+              <p>Race against time to pronounce correctly</p>
+            </div>
+            <div class="game-card glass-card" onclick="startGame('sound_catch')">
+              <div class="game-icon">🪤</div>
+              <h4 data-i18n="game_sound_catch">Sound Catch</h4>
+              <p>Catch the right sounds</p>
+            </div>
+            <div class="game-card glass-card" onclick="startGame('tongue_twister')">
+              <div class="game-icon">👅</div>
+              <h4 data-i18n="game_tongue_twister">Tongue Twister</h4>
+              <p>Master tricky phrases</p>
+            </div>
+          </div>
+
+          <!-- Upgrade Banner (shown for free users) -->
+          <div id="upgradeBanner" class="glass-card" style="margin-top:1.5rem;padding:1.5rem;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(123,47,247,0.15),rgba(0,212,255,0.1));border-color:rgba(123,47,247,0.3);display:none;">
+            <div>
+              <h4 style="font-weight:700;">Unlock All Games</h4>
+              <p style="color:rgba(255,255,255,0.6);font-size:0.9rem;" data-i18n="dashboard_upgrade">Upgrade for unlimited</p>
+            </div>
+            <a href="subscription.html" class="btn btn-primary btn-sm">Upgrade</a>
+          </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div>
+          <!-- Quick Practice -->
+          <div class="glass-card" style="margin-bottom:1.5rem;">
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;">Quick Practice</h3>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:0.5rem;display:block;">Language</label>
+              <div style="display:flex;gap:0.5rem;">
+                <button class="btn btn-sm practice-lang-btn active" data-plang="en" onclick="selectPracticeLang('en', this)">English</button>
+                <button class="btn btn-sm practice-lang-btn" data-plang="bn" onclick="selectPracticeLang('bn', this)">বাংলা</button>
+              </div>
+            </div>
+            <div style="margin-bottom:1rem;">
+              <label style="font-size:0.85rem;color:rgba(255,255,255,0.5);margin-bottom:0.5rem;display:block;">Duration</label>
+              <div style="display:flex;gap:0.5rem;">
+                <button class="btn btn-sm duration-btn" data-dur="2" onclick="selectDur(2, this)">2m</button>
+                <button class="btn btn-sm duration-btn active" data-dur="3" onclick="selectDur(3, this)">3m</button>
+                <button class="btn btn-sm duration-btn" data-dur="4" onclick="selectDur(4, this)">4m</button>
+                <button class="btn btn-sm duration-btn" data-dur="5" onclick="selectDur(5, this)">5m</button>
+              </div>
+            </div>
+            <a href="practice.html" class="btn btn-primary" style="width:100%;" data-i18n="dashboard_start">Start Practice</a>
+          </div>
+
+          <!-- Recent Sessions -->
+          <div class="glass-card">
+            <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;" data-i18n="dashboard_history">Recent Sessions</h3>
+            <div id="recentSessions">
+              <div style="padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-size:0.9rem;font-weight:500;">Vowel Chain</div>
+                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Today, 2:30 PM</div>
+                </div>
+                <div style="color:var(--success);font-weight:700;">82%</div>
+              </div>
+              <div style="padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-size:0.9rem;font-weight:500;">Syllable Jump</div>
+                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Today, 1:15 PM</div>
+                </div>
+                <div style="color:var(--warning);font-weight:700;">68%</div>
+              </div>
+              <div style="padding:0.75rem 0;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-size:0.9rem;font-weight:500;">Word Match</div>
+                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Yesterday, 4:00 PM</div>
+                </div>
+                <div style="color:var(--success);font-weight:700;">91%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Developer Badge -->
+  <div class="dev-badge" id="devBadge">DEV MODE</div>
+  <div class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/subscription.js"></script>
+
+  <style>
+    .practice-lang-btn, .duration-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6);
+    }
+    .practice-lang-btn.active, .duration-btn.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    body.kid-theme .stat-value {
+      font-family: 'Comic Neue', 'Comic Sans MS', cursive !important;
+    }
+    body.kid-theme .game-card .game-icon {
+      font-size: 3rem;
+    }
+    body.kid-theme .game-card h4 {
+      font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+      font-size: 1.1rem;
+    }
+
+    /* Mobile-responsive improvements */
+    @media (max-width: 768px) {
+      .dashboard-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      .dashboard-header > div:last-child {
+        width: 100%;
+        flex-wrap: wrap;
+      }
+      .game-selector {
+        display: flex;
+        overflow-x: auto;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+      }
+      .game-selector .game-card {
+        min-width: 160px;
+        flex-shrink: 0;
+        scroll-snap-align: start;
+      }
+      .glass-card[style*="margin-bottom:1.5rem"] {
+        padding: 1rem;
+      }
+      .dev-badge {
+        top: auto !important;
+        bottom: 1rem !important;
+        right: 1rem !important;
+        font-size: 0.65rem;
+        padding: 3px 8px;
+      }
+    }
+  </style>
+
+  <script>
+    let isKidMode = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initSupabase();
+      i18n.init();
+      Auth.init();
+
+      // Language switcher
+      initLanguageSwitcher();
+
+      // Mobile menu
+      const btn = document.getElementById('mobileMenuBtn');
+      const nav = document.getElementById('navLinks');
+      if (btn && nav) {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('active');
+          nav.classList.toggle('active');
+        });
+      }
+
+      // Require auth (works in both demo and Supabase mode)
+      if (!Auth.currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      await Auth.loadUserProfile();
+      const profile = Auth.userProfile;
+
+      if (profile) {
+        // Apply theme
+        if (profile.age < 10) {
+          document.body.className = 'kid-theme';
+          isKidMode = true;
+        }
+
+        // Update greeting
+        const name = profile.display_name || 'there';
+        document.getElementById('userGreeting').textContent =
+          isKidMode ? `Hi ${name}! 🌟 Let's practice!` : `Welcome back, ${name}`;
+
+        // Check daily limit
+        const limit = await Auth.checkDailyLimit();
+        if (limit.unlimited) {
+          document.getElementById('exercisesLeft').textContent = 'Unlimited';
+        } else {
+          document.getElementById('exercisesLeft').textContent = `${limit.remaining} exercises left today`;
+        }
+
+        // Show upgrade banner for free users
+        if (profile.subscription_status === 'free') {
+          document.getElementById('upgradeBanner').style.display = 'flex';
+        }
+
+        // Dev mode badge
+        document.getElementById('devBadge').classList.add('visible');
+        document.getElementById('devBadge').addEventListener('dblclick', () => {
+          Auth.updateUserProfile({ subscription_status: 'yearly' });
+          Utils.showToast('Developer premium activated!', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        });
+      }
+
+      // Entrance animations
+      if (typeof gsap !== 'undefined') {
+        gsap.from('.dashboard-header', { y: 20, opacity: 0, duration: 0.5, ease: 'power3.out' });
+        gsap.from('.stat-card', { y: 30, opacity: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.2 });
+        gsap.from('.game-card', { y: 30, opacity: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out', delay: 0.4 });
+      }
+    });
+
+    function selectPracticeLang(lang, el) {
+      document.querySelectorAll('.practice-lang-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      Utils.setLocal('exercise_language', lang);
+    }
+
+    function selectDur(dur, el) {
+      document.querySelectorAll('.duration-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      Utils.setLocal('practice_duration', dur);
+    }
+
+    function startGame(gameType) {
+      Utils.setLocal('selected_game', gameType);
+      window.location.href = 'practice.html';
+    }
+  </script>
+</body>
+</html>

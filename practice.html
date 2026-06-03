@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Practice — LexisAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mature-theme.css">
+  <link rel="stylesheet" href="css/kid-theme.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+  <style>
+    /* ======== PRACTICE NAV ======== */
+    .practice-nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 0.5rem 1rem;
+      background: rgba(10, 10, 30, 0.95);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .practice-nav-left { display:flex; align-items:center; gap:0.5rem; min-width:0; }
+    .practice-nav-center { flex:1; text-align:center; min-width:0; }
+    .practice-nav-right { display:flex; align-items:center; gap:0.75rem; }
+
+    .practice-timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      font-weight: 700;
+      color: var(--primary-light);
+    }
+    .practice-timer.warning { color: var(--warning); }
+    .practice-timer.danger { color: var(--danger); animation: pulse 1s ease-in-out infinite; }
+
+    /* ======== MODE BADGE ======== */
+    .mode-badge {
+      padding: 3px 10px;
+      border-radius: 12px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .mode-badge.online { background:rgba(0,255,136,0.15); color:#00FF88; border:1px solid rgba(0,255,136,0.3); }
+    .mode-badge.local { background:rgba(255,165,0,0.15); color:#FFA500; border:1px solid rgba(255,165,0,0.3); }
+    .mode-badge.gemini { background:rgba(156,39,176,0.15); color:#CE93D8; border:1px solid rgba(156,39,176,0.3); }
+
+    /* ======== TARGET DISPLAY ======== */
+    .target-display {
+      position: absolute;
+      top: 12px; left: 50%; transform: translateX(-50%);
+      padding: 10px 28px;
+      border-radius: 20px;
+      background: rgba(10, 10, 30, 0.9);
+      backdrop-filter: blur(20px);
+      border: 2px solid rgba(255, 215, 0, 0.5);
+      z-index: 10;
+      text-align: center;
+      white-space: nowrap;
+      box-shadow: 0 0 25px rgba(255, 215, 0, 0.2), 0 8px 32px rgba(0,0,0,0.3);
+      animation: targetGlow 2s ease-in-out infinite;
+    }
+    .target-display .phoneme-target {
+      color: #FFD700;
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      display: block;
+      margin-top: 2px;
+      text-shadow: 0 0 20px rgba(255,215,0,0.5);
+    }
+    .target-display .target-instruction {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.75rem;
+    }
+    @keyframes targetGlow {
+      0%, 100% { box-shadow: 0 0 25px rgba(255,215,0,0.2), 0 8px 32px rgba(0,0,0,0.3); }
+      50% { box-shadow: 0 0 35px rgba(255,215,0,0.35), 0 8px 32px rgba(0,0,0,0.3); }
+    }
+
+    /* ======== MIC STATUS ======== */
+    .mic-status {
+      position: absolute;
+      bottom: 100px; left: 50%; transform: translateX(-50%);
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: rgba(10, 10, 30, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: 0.8rem;
+      font-weight: 600;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mic-status.listening { border-color:rgba(0,255,136,0.4); color:#00FF88; }
+    .mic-status.not-listening { border-color:rgba(255,68,68,0.4); color:#FF4444; }
+    .mic-status .mic-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* ======== PHONETIC SCORE ======== */
+    .phonetic-score {
+      position: absolute;
+      bottom: 140px; left: 50%; transform: translateX(-50%);
+      padding: 8px 20px;
+      border-radius: 16px;
+      background: rgba(10,10,30,0.9);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1);
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      font-weight: 700;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      text-align: center;
+    }
+    .phonetic-score.visible { opacity:1; transform: translateX(-50%) scale(1.1); }
+    .phonetic-score.excellent { color:#00FF88; border-color:rgba(0,255,136,0.3); }
+    .phonetic-score.good { color:#00D4FF; border-color:rgba(0,212,255,0.3); }
+    .phonetic-score.fair { color:#FFD700; border-color:rgba(255,215,0,0.3); }
+    .phonetic-score.try_again { color:#FF4444; border-color:rgba(255,68,68,0.3); }
+
+    /* ======== DETECTED TEXT DISPLAY ======== */
+    .detected-text-display {
+      position: absolute;
+      top: 65px; left: 50%; transform: translateX(-50%);
+      padding: 8px 24px;
+      border-radius: 16px;
+      background: rgba(10, 10, 30, 0.92);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(0, 212, 255, 0.4);
+      z-index: 11;
+      text-align: center;
+      max-width: 90%;
+      opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none;
+    }
+    .detected-text-display.visible { opacity:1; transform: translateX(-50%) scale(1.02); }
+    .detected-text-display .detected-label {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+      display: block;
+      margin-bottom: 2px;
+    }
+    .detected-text-display .detected-text {
+      color: #00D4FF;
+      font-size: clamp(1rem, 3vw, 1.4rem);
+      font-weight: 700;
+      display: block;
+      word-break: break-word;
+    }
+    .detected-text-display .detected-source {
+      color: rgba(255,255,255,0.35);
+      font-size: 0.6rem;
+      display: block;
+      margin-top: 2px;
+    }
+    .detected-text-display.match { border-color: rgba(0,255,136,0.5); }
+    .detected-text-display.match .detected-text { color: #00FF88; }
+    .detected-text-display.no-match { border-color: rgba(255,68,68,0.4); }
+    .detected-text-display.no-match .detected-text { color: #FF6B6B; }
+
+    /* ======== VOLUME METER ======== */
+    .volume-meter { width:100%; height:6px; border-radius:3px; background:rgba(255,255,255,0.1); overflow:hidden; margin-top:6px; }
+    .volume-meter-fill { height:100%; border-radius:3px; background:var(--gradient-primary); transition:width 0.05s; width:0%; }
+
+    /* ======== DEBUG PANEL ======== */
+    .debug-panel {
+      background:rgba(0,0,0,0.3);
+      border:1px solid rgba(255,255,255,0.08);
+      border-radius:8px;
+      padding:0.5rem;
+      font-family:'JetBrains Mono',monospace;
+      font-size:0.65rem;
+      color:rgba(255,255,255,0.5);
+      max-height:150px;
+      overflow-y:auto;
+      margin-top:0.5rem;
+    }
+    .debug-panel .debug-line { padding:2px 0; border-bottom:1px solid rgba(255,255,255,0.03); }
+    .debug-panel .debug-line.success { color:#00FF88; }
+    .debug-panel .debug-line.warn { color:#FFD700; }
+    .debug-panel .debug-line.error { color:#FF4444; }
+    .debug-panel .debug-line.info { color:#00D4FF; }
+
+    /* ======== SESSION OVERLAYS ======== */
+    .session-overlay {
+      position: absolute; inset:0;
+      background:rgba(10,10,30,0.95);
+      backdrop-filter:blur(10px);
+      display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      z-index:50; text-align:center;
+      opacity:0; pointer-events:none;
+      transition:opacity 0.4s ease;
+      padding:1.5rem;
+      overflow-y:auto;
+    }
+    .session-overlay.active { opacity:1; pointer-events:all; }
+    .session-overlay h2 { font-size:clamp(1.5rem,4vw,2.2rem); font-weight:800; margin-bottom:0.75rem; }
+
+    .results-grid {
+      display:grid; grid-template-columns:repeat(3,1fr);
+      gap:0.75rem; margin:1rem 0; width:100%; max-width:400px;
+    }
+    .result-card {
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:12px; padding:0.75rem; text-align:center;
+      transform:perspective(600px) rotateX(2deg);
+      transition:transform 0.3s ease;
+    }
+    .result-card:hover { transform:perspective(600px) rotateX(0deg) scale(1.05); }
+    .result-card .value { font-size:1.5rem; font-weight:800; }
+    .result-card .label { font-size:0.75rem; color:rgba(255,255,255,0.5); margin-top:2px; }
+
+    .weakness-section { width:100%; max-width:400px; margin:0.75rem 0; }
+    .weakness-section h3 { font-size:0.9rem; color:rgba(255,255,255,0.6); margin-bottom:0.5rem; }
+    .phoneme-bar { display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; }
+    .phoneme-bar .phoneme-label { font-weight:700; min-width:35px; text-align:right; font-size:0.85rem; }
+    .phoneme-bar .bar-track { flex:1; height:6px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden; }
+    .phoneme-bar .bar-fill { height:100%; border-radius:3px; transition:width 0.5s ease; }
+    .phoneme-bar .bar-score { font-size:0.75rem; color:rgba(255,255,255,0.5); min-width:30px; }
+
+    .how-to-play {
+      background:rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.1);
+      border-radius:16px; padding:1.25rem;
+      margin:0.75rem 0; max-width:380px; text-align:left;
+    }
+    .how-to-play h3 { font-size:0.95rem; margin-bottom:0.5rem; color:#FFD700; }
+    .how-to-play ol { padding-left:1.5rem; color:rgba(255,255,255,0.7); font-size:0.85rem; line-height:1.8; }
+    .how-to-play ol li::marker { color:#FFD700; }
+
+    .game-selector {
+      display:flex; flex-wrap:wrap; gap:0.5rem;
+      justify-content:center; margin:0.75rem 0; max-width:420px;
+    }
+    .game-btn {
+      padding:10px 16px;
+      border-radius:12px;
+      border:1px solid rgba(255,255,255,0.15);
+      background:rgba(255,255,255,0.05);
+      color:rgba(255,255,255,0.7);
+      cursor:pointer;
+      font-size:0.85rem;
+      font-weight:600;
+      transition:all 0.2s ease;
+      min-height:44px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .game-btn:hover { background:rgba(255,255,255,0.1); border-color:rgba(255,255,255,0.3); transform:translateY(-2px); }
+    .game-btn.selected {
+      background:linear-gradient(135deg,#7B2FF7,#00D4FF);
+      border-color:transparent; color:#fff;
+      box-shadow:0 0 15px rgba(123,47,247,0.3);
+    }
+
+    /* ======== BOTTOM SHEET (Mobile sidebar) ======== */
+    .bottom-sheet-toggle {
+      display:none;
+      position:fixed; bottom:0; left:0; right:0;
+      z-index:90;
+      background:rgba(10,10,30,0.95);
+      backdrop-filter:blur(20px);
+      border-top:1px solid rgba(255,255,255,0.1);
+      border-radius:16px 16px 0 0;
+      padding:8px 16px;
+      cursor:pointer;
+      text-align:center;
+      color:rgba(255,255,255,0.6);
+      font-size:0.85rem;
+      font-weight:600;
+    }
+    .bottom-sheet-toggle .handle {
+      width:40px; height:4px; border-radius:2px;
+      background:rgba(255,255,255,0.3);
+      margin:0 auto 8px;
+    }
+    .bottom-sheet-content {
+      display:none;
+      position:fixed; bottom:0; left:0; right:0;
+      z-index:95;
+      background:rgba(10,10,30,0.98);
+      backdrop-filter:blur(20px);
+      border-top:1px solid rgba(255,255,255,0.1);
+      border-radius:20px 20px 0 0;
+      padding:16px;
+      max-height:60vh;
+      overflow-y:auto;
+      transform:translateY(100%);
+      transition:transform 0.3s ease;
+    }
+    .bottom-sheet-content.open { transform:translateY(0); }
+    .bottom-sheet-content .sheet-handle {
+      width:40px; height:4px; border-radius:2px;
+      background:rgba(255,255,255,0.3);
+      margin:0 auto 12px;
+    }
+
+    /* ======== MOBILE RESPONSIVE ======== */
+    @media (max-width: 768px) {
+      .practice-nav { padding:0.4rem 0.75rem; }
+      .practice-nav .mode-badge { display:none; }
+      
+      .practice-sidebar { display:none !important; }
+      .bottom-sheet-toggle { display:block; }
+      .bottom-sheet-content { display:block; }
+      
+      .practice-layout {
+        grid-template-columns:1fr !important;
+        padding:0.5rem !important;
+      }
+      .practice-game-area {
+        min-height:calc(100vh - 52px);
+        border-radius:12px;
+      }
+      .mic-status { bottom:80px; }
+      .phonetic-score { bottom:110px; }
+      .target-display { top:8px; padding:8px 20px; }
+      
+      .practice-controls { bottom:12px !important; }
+      .mic-btn { width:56px !important; height:56px !important; font-size:1.4rem !important; }
+      
+      .session-overlay { padding:1rem; }
+      .results-grid { gap:0.5rem; }
+      .result-card .value { font-size:1.2rem; }
+      
+      .game-btn { padding:8px 12px; font-size:0.8rem; }
+      
+      .how-to-play { padding:1rem; }
+      .how-to-play ol { font-size:0.8rem; }
+      
+      .detected-text-display { top: 58px; padding: 6px 16px; }
+      .detected-text-display .detected-text { font-size: 0.95rem; }
+    }
+
+    @media (max-width: 480px) {
+      .practice-nav-right { gap:0.4rem; }
+      .practice-timer { font-size:0.95rem; }
+      #practiceScore { font-size:0.95rem; }
+      .game-btn { font-size:0.75rem; padding:7px 10px; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity:1; }
+      50% { opacity:0.5; }
+    }
+
+    /* ======== DEBUG VOICE TEST PANEL ======== */
+    .debug-voice-btn {
+      position: fixed;
+      bottom: 20px; right: 20px;
+      z-index: 200;
+      padding: 10px 16px;
+      border-radius: 14px;
+      border: 2px solid rgba(255, 165, 0, 0.6);
+      background: rgba(10, 10, 30, 0.95);
+      backdrop-filter: blur(15px);
+      color: #FFA500;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 20px rgba(255,165,0,0.2);
+      transition: all 0.2s ease;
+    }
+    .debug-voice-btn:hover { background: rgba(255,165,0,0.15); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(255,165,0,0.3); }
+    .debug-voice-btn.active { border-color: #00FF88; color: #00FF88; animation: pulse 1.5s ease-in-out infinite; }
+
+    .debug-voice-panel {
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      z-index: 300;
+      width: 90%; max-width: 500px;
+      max-height: 80vh;
+      border-radius: 20px;
+      border: 2px solid rgba(255,165,0,0.5);
+      background: rgba(10, 10, 30, 0.98);
+      backdrop-filter: blur(25px);
+      box-shadow: 0 0 50px rgba(255,165,0,0.15), 0 20px 60px rgba(0,0,0,0.5);
+      padding: 1.5rem;
+      display: none;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+    }
+    .debug-voice-panel.open { display: flex; transform: translate(-50%, -50%) scale(1); }
+    .debug-voice-panel h3 { font-size: 1.1rem; color: #FFA500; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .debug-voice-panel .debug-close { position: absolute; top: 12px; right: 16px; background: none; border: none; color: rgba(255,255,255,0.4); font-size: 1.5rem; cursor: pointer; line-height: 1; }
+    .debug-voice-panel .debug-close:hover { color: #fff; }
+
+    .debug-live-transcript {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid rgba(0,212,255,0.3);
+      border-radius: 12px;
+      padding: 1rem;
+      min-height: 80px;
+      text-align: center;
+    }
+    .debug-live-transcript .transcript-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-bottom: 0.5rem; }
+    .debug-live-transcript .transcript-text { font-size: 1.4rem; font-weight: 700; color: #00D4FF; word-break: break-word; min-height: 40px; }
+    .debug-live-transcript .transcript-interim { font-size: 1rem; color: rgba(0,212,255,0.5); font-style: italic; margin-top: 4px; }
+    .debug-live-transcript .transcript-empty { color: rgba(255,255,255,0.3); font-size: 0.9rem; }
+
+    .debug-status-bar {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.75rem;
+    }
+    .debug-status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .debug-status-dot.active { background: #00FF88; animation: pulse 1s infinite; }
+    .debug-status-dot.inactive { background: #FF4444; }
+    .debug-status-dot.connecting { background: #FFD700; animation: pulse 0.5s infinite; }
+
+    .debug-history {
+      max-height: 150px; overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 0.5rem;
+    }
+    .debug-history-entry {
+      padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem; color: rgba(255,255,255,0.5);
+      display: flex; justify-content: space-between;
+    }
+    .debug-history-entry .hist-text { color: #00D4FF; font-weight: 600; }
+    .debug-history-entry .hist-source { color: rgba(255,255,255,0.3); font-size: 0.6rem; }
+
+    .debug-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .debug-actions button {
+      padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); cursor: pointer;
+      font-size: 0.8rem; font-weight: 600; transition: all 0.2s;
+    }
+    .debug-actions button:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+    .debug-actions button.primary { background: rgba(0,212,255,0.15); border-color: rgba(0,212,255,0.4); color: #00D4FF; }
+    .debug-actions button.stop { background: rgba(255,68,68,0.15); border-color: rgba(255,68,68,0.4); color: #FF4444; }
+
+    @media (max-width: 768px) {
+      .debug-voice-btn { bottom: 70px; right: 12px; padding: 8px 12px; font-size: 0.75rem; }
+      .debug-voice-panel { width: 95%; padding: 1rem; }
+    }
+
+    /* Kid mode overrides */
+    body.kid-theme .game-btn {
+      border-radius:16px;
+      font-family:'Comic Neue','Comic Sans MS',cursive;
+      font-size:0.9rem;
+    }
+    body.kid-theme .game-btn.selected {
+      background:linear-gradient(135deg,#FF6B9D,#FFD93D);
+    }
+    body.kid-theme .target-display {
+      border-color:rgba(255,217,61,0.6);
+      box-shadow:0 0 30px rgba(255,217,61,0.3);
+    }
+    body.kid-theme .mic-btn {
+      width:72px !important; height:72px !important;
+      font-size:1.8rem !important;
+      background:linear-gradient(135deg,#FFD93D,#FF6B35) !important;
+    }
+  </style>
+</head>
+<body class="mature-theme">
+
+  <!-- Practice Navigation -->
+  <div class="practice-nav">
+    <div class="practice-nav-left">
+      <a href="dashboard.html" class="btn btn-icon btn-secondary" style="width:36px;height:36px;font-size:1rem;">←</a>
+      <span style="font-weight:700;font-size:0.9rem;" id="gameTitle">Practice</span>
+      <span class="mode-badge local" id="modeBadge">LOCAL</span>
+    </div>
+    <div class="practice-nav-center">
+      <div class="practice-timer" id="practiceTimer">3:00</div>
+    </div>
+    <div class="practice-nav-right">
+      <span id="practiceScore" style="font-weight:700;font-size:1rem;">0 pts</span>
+      <span id="practiceLevel" style="font-size:0.8rem;color:rgba(255,255,255,0.5);">Lv1</span>
+    </div>
+  </div>
+
+  <!-- Practice Layout -->
+  <div class="practice-page">
+    <div class="practice-layout">
+      <!-- Sidebar: Audio Dashboard (desktop only) -->
+      <div class="practice-sidebar">
+        <div class="audio-dashboard">
+          <canvas id="waveformCanvas" height="100"></canvas>
+          <div class="dashboard-label">Waveform</div>
+        </div>
+        <div class="audio-dashboard">
+          <canvas id="spectrogramCanvas" height="100"></canvas>
+          <div class="dashboard-label">Spectrogram</div>
+        </div>
+        <div class="glass-card" style="padding:0.75rem;">
+          <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:0.4rem;">Volume</div>
+          <div class="volume-meter"><div class="volume-meter-fill" id="volumeMeter"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:0.5rem;">
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Pitch: <span id="pitchDisplay" style="color:var(--secondary);">--</span> Hz</div>
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Score: <span id="lastScore" style="color:var(--success);">--</span>%</div>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:0.75rem;">
+          <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:0.4rem;" id="resultLabel">Analysis:</div>
+          <div id="speechResult" style="font-size:0.95rem;min-height:24px;color:var(--text-secondary);font-weight:600;">Waiting...</div>
+        </div>
+        <div class="glass-card" style="padding:0.75rem;">
+          <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:0.4rem;">Session Stats</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Attempts</span>
+            <span id="statAttempts" style="font-size:0.75rem;font-weight:600;">0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Correct</span>
+            <span id="statCorrect" style="font-size:0.75rem;font-weight:600;color:#00FF88;">0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:0.75rem;color:rgba(255,255,255,0.4);">Accuracy</span>
+            <span id="statAccuracy" style="font-size:0.75rem;font-weight:600;color:#00D4FF;">0%</span>
+          </div>
+        </div>
+        <div class="glass-card" style="padding:0.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem;">
+            <span style="font-size:0.7rem;color:rgba(255,255,255,0.4);">Debug</span>
+            <button onclick="clearDebug()" style="font-size:0.6rem;color:rgba(255,255,255,0.3);background:none;border:none;cursor:pointer;">Clear</button>
+          </div>
+          <div class="debug-panel" id="debugPanel"><div class="debug-line info">Initializing...</div></div>
+        </div>
+      </div>
+
+      <!-- Game Area -->
+      <div class="practice-game-area" id="gameArea">
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="target-display" id="targetDisplay" style="display:none;">
+          <div class="target-instruction" id="targetInstruction">Say this:</div>
+          <div class="phoneme-target" id="targetPhoneme">--</div>
+        </div>
+
+        <div class="mic-status not-listening" id="micStatus">
+          <div class="mic-dot"></div>
+          <span id="micStatusText">Mic off</span>
+        </div>
+
+        <div class="phonetic-score" id="phoneticScore">Good! 82%</div>
+
+        <div class="detected-text-display" id="detectedTextDisplay">
+          <span class="detected-label" id="detectedLabel">You said:</span>
+          <span class="detected-text" id="detectedText">--</span>
+          <span class="detected-source" id="detectedSource"></span>
+        </div>
+
+        <div class="practice-controls">
+          <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Press to speak">🎤</button>
+        </div>
+
+        <!-- Session Complete Overlay -->
+        <div class="session-overlay" id="sessionOverlay">
+          <div style="font-size:2.5rem;margin-bottom:0.25rem;">🎉</div>
+          <h2>Session Complete!</h2>
+          <div class="results-grid">
+            <div class="result-card">
+              <div class="value text-gradient" id="finalScore">0</div>
+              <div class="label">Score</div>
+            </div>
+            <div class="result-card">
+              <div class="value" id="finalAccuracy" style="background:linear-gradient(135deg,#00FF88,#00D4FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">0%</div>
+              <div class="label">Accuracy</div>
+            </div>
+            <div class="result-card">
+              <div class="value" id="finalLevel" style="background:linear-gradient(135deg,#FFD700,#FF6B35);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">1</div>
+              <div class="label">Level</div>
+            </div>
+          </div>
+          <div class="weakness-section" id="detailedResults">
+            <h3>Pronunciation Breakdown</h3>
+            <div id="phonemeBreakdown"></div>
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;justify-content:center;">
+            <a href="dashboard.html" class="btn btn-secondary">Dashboard</a>
+            <button class="btn btn-primary" onclick="restartSession()">Play Again</button>
+          </div>
+        </div>
+
+        <!-- Start Overlay -->
+        <div class="session-overlay active" id="startOverlay">
+          <div style="font-size:2.5rem;margin-bottom:0.25rem;">🎙️</div>
+          <h2>Ready to Practice?</h2>
+
+          <div id="startModeInfo" style="margin-bottom:0.75rem;padding:8px 16px;border-radius:12px;background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.3);font-size:0.8rem;color:#FFA500;">
+            Local Audio Mode — Works offline!
+          </div>
+
+          <div style="margin-bottom:0.75rem;">
+            <div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:0.4rem;">Choose Game:</div>
+            <div class="game-selector" id="gameSelector">
+              <button class="game-btn selected" data-game="syllable_jump">🦘 Jump</button>
+              <button class="game-btn" data-game="vowel_chain">🔮 Chain</button>
+              <button class="game-btn" data-game="word_match">🃏 Match</button>
+              <button class="game-btn" data-game="pronunciation_race">🏎️ Race</button>
+              <button class="game-btn" data-game="sound_catch">🪤 Catch</button>
+              <button class="game-btn" data-game="tongue_twister">👅 Twist</button>
+            </div>
+          </div>
+
+          <div class="how-to-play" id="howToPlay">
+            <h3>How to Play</h3>
+            <ol>
+              <li>Click <strong>"Start Session"</strong></li>
+              <li>Click the <strong>🎤 mic button</strong></li>
+              <li>Say the <strong style="color:#FFD700;">target word</strong> clearly</li>
+              <li><strong style="color:#00FF88;">Green</strong> = Great, <strong style="color:#FFD700;">Yellow</strong> = OK, <strong style="color:#FF4444;">Red</strong> = Try again</li>
+              <li>Keep speaking to level up!</li>
+            </ol>
+          </div>
+
+          <button class="btn btn-primary btn-lg" onclick="startSession()" style="margin-top:0.75rem;">Start Session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Bottom Sheet -->
+  <div class="bottom-sheet-toggle" id="bottomSheetToggle" onclick="toggleBottomSheet()">
+    <div class="handle"></div>
+    <span id="bottomSheetLabel">📊 Stats & Debug</span>
+  </div>
+  <div class="bottom-sheet-content" id="bottomSheetContent">
+    <div class="sheet-handle" onclick="toggleBottomSheet()"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.75rem;">
+      <div class="glass-card" style="padding:0.5rem;text-align:center;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);">Attempts</div>
+        <div id="statAttemptsMobile" style="font-size:1.1rem;font-weight:700;">0</div>
+      </div>
+      <div class="glass-card" style="padding:0.5rem;text-align:center;">
+        <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);">Accuracy</div>
+        <div id="statAccuracyMobile" style="font-size:1.1rem;font-weight:700;color:#00D4FF;">0%</div>
+      </div>
+    </div>
+    <div class="glass-card" style="padding:0.5rem;margin-bottom:0.5rem;">
+      <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:0.3rem;" id="resultLabelMobile">Analysis:</div>
+      <div id="speechResultMobile" style="font-size:0.9rem;min-height:20px;color:var(--text-secondary);font-weight:600;">Waiting...</div>
+    </div>
+    <div class="glass-card" style="padding:0.5rem;">
+      <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:0.3rem;">Volume</div>
+      <div class="volume-meter"><div class="volume-meter-fill" id="volumeMeterMobile"></div></div>
+    </div>
+  </div>
+
+  <!-- Debug Voice Test Button -->
+  <button class="debug-voice-btn" id="debugVoiceBtn" onclick="toggleDebugVoicePanel()">🔍 Voice Debug</button>
+
+  <!-- Debug Voice Test Panel -->
+  <div class="debug-voice-panel" id="debugVoicePanel">
+    <button class="debug-close" onclick="toggleDebugVoicePanel()">&times;</button>
+    <h3>🔍 Voice-to-Text Debug</h3>
+
+    <div class="debug-status-bar">
+      <span><span class="debug-status-dot inactive" id="debugStatusDot"></span><span id="debugStatusText">Not started</span></span>
+      <span id="debugModeInfo" style="color:rgba(255,255,255,0.4);">--</span>
+    </div>
+
+    <div class="debug-live-transcript">
+      <div class="transcript-label">LIVE TRANSCRIPTION</div>
+      <div class="transcript-text" id="debugTranscriptText">
+        <span class="transcript-empty">Click "Start Test" and speak...</span>
+      </div>
+      <div class="transcript-interim" id="debugTranscriptInterim"></div>
+    </div>
+
+    <div class="debug-actions">
+      <button class="primary" id="debugStartBtn" onclick="startDebugVoiceTest()">▶ Start Test</button>
+      <button class="stop" id="debugStopBtn" onclick="stopDebugVoiceTest()" style="display:none;">⏹ Stop Test</button>
+      <button onclick="clearDebugHistory()">🗑 Clear</button>
+      <button onclick="copyDebugLog()">📋 Copy Log</button>
+    </div>
+
+    <div>
+      <div style="font-size:0.7rem;color:rgba(255,255,255,0.4);margin-bottom:0.3rem;">Detection History:</div>
+      <div class="debug-history" id="debugHistory">
+        <div class="debug-history-entry" style="color:rgba(255,255,255,0.2);">No detections yet...</div>
+      </div>
+    </div>
+
+    <div class="debug-panel" id="debugVoiceLog" style="max-height:120px;font-size:0.6rem;">
+      <div class="debug-line info">Voice debug ready</div>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/audio-engine.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/speech-api.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/rl-engine.js"></script>
+
+  <script>
+    let isKidMode = false;
+    let practiceLanguage = 'en';
+    let practiceDuration = 3;
+    let selectedGame = 'syllable_jump';
+    let sessionActive = false;
+    let sessionTimer = null;
+    let timeRemaining = 0;
+    let totalAttempts = 0;
+    let totalCorrect = 0;
+    let isMicActive = false;
+    let isLocalMode = true;
+    let lastPhoneticScore = 0;
+    let localAnalysisTimer = null;
+    let lastVoiceEnd = 0;
+    let isCurrentlySpeaking = false;
+    let speechBuffer = [];
+    let bottomSheetOpen = false;
+    let debugVoiceActive = false;
+    let debugVoicePanelOpen = false;
+    let debugRecognition = null;
+    let debugTranscriptHistory = [];
+
+    // ======== DEBUG VOICE TEST FUNCTIONS ========
+    function toggleDebugVoicePanel() {
+      const panel = document.getElementById('debugVoicePanel');
+      const btn = document.getElementById('debugVoiceBtn');
+      debugVoicePanelOpen = !debugVoicePanelOpen;
+      if (debugVoicePanelOpen) {
+        panel.classList.add('open');
+        btn.classList.add('active');
+        debugVoiceLog('Voice debug panel opened', 'info');
+      } else {
+        panel.classList.remove('open');
+        btn.classList.remove('active');
+        if (debugVoiceActive) stopDebugVoiceTest();
+      }
+    }
+
+    function debugVoiceLog(message, type = 'info') {
+      const panel = document.getElementById('debugVoiceLog');
+      if (!panel) return;
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = `debug-line ${type}`;
+      line.textContent = `[${time}] ${message}`;
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+      while (panel.children.length > 100) panel.removeChild(panel.firstChild);
+
+      // Also log to main debug panel and console
+      debugLog(`[VoiceDebug] ${message}`, type);
+      const consoleFn = type === 'error' ? console.error : type === 'warn' ? console.warn : type === 'success' ? console.info : console.log;
+      consoleFn(`%c[VoiceDebug ${time}] ${message}`, type === 'error' ? 'color:#FF4444' : type === 'warn' ? 'color:#FFD700' : type === 'success' ? 'color:#00FF88' : 'color:#00D4FF');
+    }
+
+    function startDebugVoiceTest() {
+      debugVoiceLog('=== STARTING VOICE DEBUG TEST ===', 'info');
+
+      const startBtn = document.getElementById('debugStartBtn');
+      const stopBtn = document.getElementById('debugStopBtn');
+      const statusDot = document.getElementById('debugStatusDot');
+      const statusText = document.getElementById('debugStatusText');
+      const transcriptText = document.getElementById('debugTranscriptText');
+      const modeInfo = document.getElementById('debugModeInfo');
+
+      // Initialize AudioEngine mic if not already
+      if (!AudioEngine.audioContext) {
+        debugVoiceLog('Initializing microphone...', 'info');
+        AudioEngine.init().then(result => {
+          if (result.error) {
+            debugVoiceLog('Mic error: ' + result.error, 'error');
+            return;
+          }
+          debugVoiceLog('Microphone initialized OK', 'success');
+          _doStartDebugVoiceTest();
+        });
+      } else {
+        _doStartDebugVoiceTest();
+      }
+
+      function _doStartDebugVoiceTest() {
+        debugVoiceActive = true;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-block';
+        statusDot.className = 'debug-status-dot connecting';
+        statusText.textContent = 'Connecting...';
+        transcriptText.innerHTML = '<span class="transcript-empty">Listening... speak now</span>';
+
+        debugVoiceLog(`Language: ${practiceLanguage}`, 'info');
+        debugVoiceLog(`Will try: Browser STT first, then Gemini API fallback`, 'info');
+        debugVoiceLog(`Gemini API key: ${SpeechAPI.geminiApiKey ? 'CONFIGURED' : 'NOT SET'}`, 'info');
+
+        // Use SpeechAPI but in debug mode
+        // v7: bn-IN first — bn-BD always fails on Google servers
+        const lang = practiceLanguage === 'bn' ? 'bn-IN' : 'en-US';
+        debugVoiceLog(`Calling SpeechAPI.init("${lang}")...`, 'info');
+        SpeechAPI.init(lang);
+
+        // Override onResult for debug mode
+        SpeechAPI.onResult = (data) => {
+          const timestamp = new Date().toLocaleTimeString();
+
+          if (data.isFinal && data.final) {
+            debugVoiceLog(`✅ FINAL: "${data.final}" (confidence: ${Math.round(data.confidence * 100)}%, source: ${data.source})`, 'success');
+            transcriptText.textContent = data.final;
+            transcriptText.style.color = '#00FF88';
+            document.getElementById('debugTranscriptInterim').textContent = '';
+
+            // Add to history
+            debugTranscriptHistory.unshift({ text: data.final, source: data.source, confidence: Math.round(data.confidence * 100), time: timestamp });
+            if (debugTranscriptHistory.length > 50) debugTranscriptHistory.pop();
+            updateDebugHistory();
+
+            // Flash the transcript green
+            setTimeout(() => { transcriptText.style.color = '#00D4FF'; }, 1500);
+          } else if (data.interim) {
+            debugVoiceLog(`...interim: "${data.interim}" (source: ${data.source})`, 'debug');
+            transcriptText.textContent = data.interim;
+            document.getElementById('debugTranscriptInterim').textContent = '(listening...)';
+          }
+        };
+
+        SpeechAPI.onError = (error) => {
+          debugVoiceLog(`Error event: ${error}`, 'warn');
+
+          if (error === 'local-mode') {
+            statusDot.className = 'debug-status-dot active';
+            statusText.textContent = 'Local Mode (offline)';
+            modeInfo.textContent = 'Formant analysis only — no text transcription';
+            debugVoiceLog('⚠️ Browser STT and Gemini both failed. Using local formant analysis.', 'warn');
+            debugVoiceLog('Local mode CANNOT produce text — only frequency analysis.', 'error');
+            debugVoiceLog('This means: your browser cannot do Bengali STT, AND Gemini API also failed.', 'error');
+          } else if (error === 'gemini-mode') {
+            statusDot.className = 'debug-status-dot active';
+            statusText.textContent = 'Gemini AI Mode';
+            modeInfo.textContent = 'Audio → Gemini API → Text';
+            debugVoiceLog('🔮 Switched to Gemini API fallback mode', 'info');
+            debugVoiceLog('Recording audio and sending to Gemini for transcription...', 'info');
+
+            // Start recording for Gemini
+            AudioEngine.startRecording();
+            if (AudioEngine.mediaRecorder) {
+              AudioEngine.mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                  AudioEngine.recordedChunks.push(e.data);
+                  SpeechAPI.feedAudioChunk(e.data);
+                }
+              };
+            }
+          } else if (error === 'not-allowed') {
+            statusDot.className = 'debug-status-dot inactive';
+            statusText.textContent = 'Mic Denied';
+            debugVoiceLog('🚫 MICROPHONE ACCESS DENIED — please allow mic in browser settings', 'error');
+          }
+        };
+
+        SpeechAPI.start();
+
+        // Update status based on what mode we're in after a short delay
+        setTimeout(() => {
+          if (SpeechAPI.isOnlineMode && !SpeechAPI.useGemini) {
+            statusDot.className = 'debug-status-dot active';
+            statusText.textContent = 'Browser STT Active';
+            modeInfo.textContent = `Locale: ${SpeechAPI.recognition?.lang || 'unknown'}`;
+            debugVoiceLog(`✅ Browser STT is ACTIVE — locale: ${SpeechAPI.recognition?.lang}`, 'success');
+          } else if (SpeechAPI.useGemini) {
+            debugVoiceLog('🔮 Gemini mode is active', 'info');
+          } else if (SpeechAPI.isLocalMode) {
+            statusDot.className = 'debug-status-dot inactive';
+            statusText.textContent = 'Local Mode (no text)';
+            modeInfo.textContent = 'Cannot produce text output';
+            debugVoiceLog('⚠️ Only local mode available — no text transcription possible', 'warn');
+          } else {
+            statusDot.className = 'debug-status-dot connecting';
+            statusText.textContent = 'Connecting...';
+            debugVoiceLog('Still connecting...', 'info');
+          }
+        }, 3000);
+
+        // v7 REMOVED: _startStandaloneRecognition() was creating a CONFLICTING
+        // second SpeechRecognition instance. Chrome only allows ONE active
+        // SpeechRecognition at a time. The second instance kills the first one,
+        // causing the 'aborted' error and premature Gemini fallback.
+        // SpeechAPI.recognition is now the ONLY recognition instance.
+      }
+    }
+
+    // v7: _startStandaloneRecognition() REMOVED — was creating a CONFLICTING
+    // second SpeechRecognition instance. Chrome only allows ONE active
+    // SpeechRecognition at a time. The second instance kills SpeechAPI's
+    // recognition, causing the "aborted" error and premature Gemini fallback.
+    // Now SpeechAPI.recognition is the SINGLE source of truth for STT.
+
+    function stopDebugVoiceTest() {
+      debugVoiceActive = false;
+      debugVoiceLog('=== STOPPING VOICE DEBUG TEST ===', 'info');
+
+      SpeechAPI.stop();
+
+      if (debugRecognition) {
+        try { debugRecognition.abort(); } catch(e) {}
+        debugRecognition = null;
+      }
+
+      AudioEngine.stopRecording();
+
+      const startBtn = document.getElementById('debugStartBtn');
+      const stopBtn = document.getElementById('debugStopBtn');
+      const statusDot = document.getElementById('debugStatusDot');
+      const statusText = document.getElementById('debugStatusText');
+
+      startBtn.style.display = 'inline-block';
+      stopBtn.style.display = 'none';
+      statusDot.className = 'debug-status-dot inactive';
+      statusText.textContent = 'Stopped';
+    }
+
+    function updateDebugHistory() {
+      const el = document.getElementById('debugHistory');
+      if (!el) return;
+      el.innerHTML = '';
+      if (debugTranscriptHistory.length === 0) {
+        el.innerHTML = '<div class="debug-history-entry" style="color:rgba(255,255,255,0.2);">No detections yet...</div>';
+        return;
+      }
+      debugTranscriptHistory.forEach(entry => {
+        const div = document.createElement('div');
+        div.className = 'debug-history-entry';
+        div.innerHTML = `<span class="hist-text">"${entry.text}"</span><span class="hist-source">${entry.source} ${entry.confidence}% ${entry.time}</span>`;
+        el.appendChild(div);
+      });
+    }
+
+    function clearDebugHistory() {
+      debugTranscriptHistory = [];
+      updateDebugHistory();
+      const transcriptText = document.getElementById('debugTranscriptText');
+      if (transcriptText) transcriptText.innerHTML = '<span class="transcript-empty">Click "Start Test" and speak...</span>';
+      document.getElementById('debugTranscriptInterim').textContent = '';
+      const logPanel = document.getElementById('debugVoiceLog');
+      if (logPanel) logPanel.innerHTML = '<div class="debug-line info">History cleared</div>';
+      debugVoiceLog('Debug history cleared', 'info');
+    }
+
+    function copyDebugLog() {
+      const logPanel = document.getElementById('debugVoiceLog');
+      if (!logPanel) return;
+      const text = Array.from(logPanel.children).map(el => el.textContent).join('\n');
+      navigator.clipboard.writeText(text).then(() => {
+        Utils.showToast('Debug log copied to clipboard!', 'success');
+        debugVoiceLog('Log copied to clipboard', 'success');
+      }).catch(() => {
+        debugVoiceLog('Failed to copy — check browser permissions', 'error');
+      });
+    }
+
+    // ======== DEBUG CONSOLE ========
+    function debugLog(message, type = 'info') {
+      const panel = document.getElementById('debugPanel');
+      if (!panel) return;
+      const time = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.className = `debug-line ${type}`;
+      line.textContent = `[${time}] ${message}`;
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+      const consoleFn = type === 'error' ? console.error : type === 'warn' ? console.warn : console.log;
+      consoleFn(`[LexisAI] ${message}`);
+      while (panel.children.length > 50) panel.removeChild(panel.firstChild);
+    }
+
+    function clearDebug() {
+      const panel = document.getElementById('debugPanel');
+      if (panel) panel.innerHTML = '<div class="debug-line info">Cleared</div>';
+    }
+
+    // ======== BOTTOM SHEET (Mobile) ========
+    function toggleBottomSheet() {
+      bottomSheetOpen = !bottomSheetOpen;
+      const content = document.getElementById('bottomSheetContent');
+      const label = document.getElementById('bottomSheetLabel');
+      if (bottomSheetOpen) {
+        content.classList.add('open');
+        label.textContent = '▼ Close';
+      } else {
+        content.classList.remove('open');
+        label.textContent = '📊 Stats & Debug';
+      }
+    }
+
+    // ======== INIT ========
+    document.addEventListener('DOMContentLoaded', async () => {
+      initSupabase();
+      i18n.init();
+      Auth.init();
+
+      selectedGame = Utils.getLocal('selected_game') || 'syllable_jump';
+      practiceLanguage = Utils.getLocal('exercise_language') || 'en';
+      practiceDuration = Utils.getLocal('practice_duration') || 3;
+
+      if (!Auth.currentUser) { window.location.href = 'login.html'; return; }
+      await Auth.loadUserProfile();
+
+      if (Auth.userProfile?.age < 10) {
+        document.body.className = 'kid-theme';
+        isKidMode = true;
+      }
+
+      const canDo = await Auth.checkDailyLimit();
+      if (!canDo.unlimited && canDo.remaining <= 0) {
+        Utils.showToast('Daily exercise limit reached. Upgrade for unlimited!', 'warning');
+        setTimeout(() => window.location.href = 'dashboard.html', 2000);
+        return;
+      }
+
+      updateGameTitle();
+      highlightSelectedGame();
+      timeRemaining = practiceDuration * 60;
+      updateTimerDisplay();
+
+      document.querySelectorAll('.game-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.game-btn').forEach(b => b.classList.remove('selected'));
+          btn.classList.add('selected');
+          selectedGame = btn.dataset.game;
+          updateGameTitle();
+        });
+      });
+
+      GameEngine.init('gameCanvas', isKidMode, practiceLanguage);
+      debugLog('LexisAI Practice page loaded', 'info');
+      debugLog(`Language: ${practiceLanguage} | Game: ${selectedGame} | Duration: ${practiceDuration}m`, 'info');
+    });
+
+    function highlightSelectedGame() {
+      document.querySelectorAll('.game-btn').forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.game === selectedGame);
+      });
+    }
+
+    function updateGameTitle() {
+      const titles = {
+        'syllable_jump': isKidMode ? 'Bunny Jump! 🐰' : 'Syllable Jump',
+        'vowel_chain': isKidMode ? 'Magic Orbs! ✨' : 'Vowel Chain',
+        'word_match': isKidMode ? 'Word Magic! 🎩' : 'Word Match',
+        'pronunciation_race': isKidMode ? 'Speed Talk! 🏎️' : 'Speed Talk',
+        'sound_catch': isKidMode ? 'Sound Catch! 🪤' : 'Sound Catch',
+        'tongue_twister': isKidMode ? 'Twisty Tongue! 👅' : 'Tongue Twister'
+      };
+      document.getElementById('gameTitle').textContent = titles[selectedGame] || 'Practice';
+    }
+
+    // ======== START SESSION ========
+    async function startSession() {
+      debugLog('Starting session...', 'info');
+
+      const result = await AudioEngine.init();
+      if (result.error) {
+        debugLog('Microphone error: ' + result.error, 'error');
+        Utils.showToast('Microphone access required: ' + result.error, 'error');
+        return;
+      }
+      debugLog('✅ Microphone initialized', 'success');
+
+      // v7: bn-IN first — bn-BD always fails on Google servers
+      SpeechAPI.init(practiceLanguage === 'bn' ? 'bn-IN' : 'en-US');
+
+      SpeechAPI.onResult = (data) => {
+        // Update the prominent detected text display
+        const detectedDisplay = document.getElementById('detectedTextDisplay');
+        const detectedText = document.getElementById('detectedText');
+        const detectedLabel = document.getElementById('detectedLabel');
+        const detectedSource = document.getElementById('detectedSource');
+
+        if (data.isFinal && data.final) {
+          debugLog(`🗣️ HEARD: "${data.final}" (confidence: ${Math.round(data.confidence * 100)}%, source: ${data.source})`, 'success');
+          document.getElementById('speechResult').textContent = data.final;
+          document.getElementById('speechResultMobile').textContent = data.final;
+          document.getElementById('resultLabel').textContent = 'You said:';
+          document.getElementById('resultLabelMobile').textContent = 'You said:';
+
+          // Show in prominent display
+          if (detectedText) detectedText.textContent = data.final;
+          if (detectedLabel) detectedLabel.textContent = 'You said:';
+          if (detectedSource) detectedSource.textContent = `via ${data.source === 'gemini' ? 'Gemini AI' : 'Browser STT'}`;
+          if (detectedDisplay) {
+            detectedDisplay.className = 'detected-text-display visible';
+            // Don't auto-hide here — processSpeechResult will update match status
+          }
+
+          processSpeechResult(data.final, data.confidence);
+        } else if (data.interim) {
+          document.getElementById('speechResult').textContent = data.interim + '...';
+          document.getElementById('speechResultMobile').textContent = data.interim + '...';
+          
+          // Show interim in prominent display
+          if (detectedText) detectedText.textContent = data.interim + '...';
+          if (detectedLabel) detectedLabel.textContent = 'Hearing:';
+          if (detectedSource) detectedSource.textContent = `via ${data.source === 'gemini' ? 'Gemini AI' : 'Browser STT'}`;
+          if (detectedDisplay) {
+            detectedDisplay.className = 'detected-text-display visible';
+          }
+        }
+      };
+
+      SpeechAPI.onError = (error) => {
+        if (error === 'local-mode') {
+          isLocalMode = true;
+          debugLog('🔌 Switched to LOCAL AUDIO MODE', 'warn');
+          debugLog('Voice → Formant Analysis → Phoneme Score', 'info');
+          debugLog('This works 100% offline!', 'success');
+          updateModeBadge('local');
+          document.getElementById('startModeInfo').innerHTML = '🟡 <strong>Local Audio Mode</strong> — Frequency analysis. Say the target clearly!';
+          document.getElementById('resultLabel').textContent = 'Detected:';
+          document.getElementById('resultLabelMobile').textContent = 'Detected:';
+        } else if (error === 'gemini-mode') {
+          isLocalMode = false;
+          debugLog('🔮 Gemini API Fallback ENABLED', 'success');
+          debugLog('Audio will be sent to Gemini for transcription', 'info');
+          updateModeBadge('gemini');
+          document.getElementById('startModeInfo').innerHTML = '🔮 <strong>Gemini AI Mode</strong> — AI-powered transcription';
+          document.getElementById('resultLabel').textContent = 'You said:';
+          document.getElementById('resultLabelMobile').textContent = 'You said:';
+        } else if (error === 'not-allowed') {
+          debugLog('🚫 Microphone access denied', 'error');
+          Utils.showToast('Please allow microphone access', 'error');
+        } else if (error === 'network') {
+          debugLog('Network error — trying next locale...', 'warn');
+        }
+      };
+
+      AudioEngine.startVisualization(
+        document.getElementById('waveformCanvas'),
+        document.getElementById('spectrogramCanvas')
+      );
+      debugLog('✅ Audio visualization started', 'success');
+
+      AudioEngine.onAudioData = (data) => {
+        const volumePercent = Math.min(100, data.volume * 300);
+        
+        // Update both desktop and mobile volume meters
+        ['volumeMeter', 'volumeMeterMobile'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            el.style.width = volumePercent + '%';
+            if (volumePercent > 60) el.style.background = '#00FF88';
+            else if (volumePercent > 20) el.style.background = 'linear-gradient(90deg, #7B2FF7, #00D4FF)';
+            else el.style.background = 'rgba(255,255,255,0.3)';
+          }
+        });
+
+        if (data.pitch > 0) {
+          document.getElementById('pitchDisplay').textContent = Math.round(data.pitch);
+        }
+
+        if (data.volume > 0.05 && sessionActive && GameEngine.onVoiceTrigger) {
+          GameEngine.onVoiceTrigger();
+        }
+
+        // ======== LOCAL MODE: Formant-based scoring ========
+        if (isLocalMode && sessionActive && isMicActive) {
+          const voiceActivity = AudioEngine.detectVoiceActivity();
+
+          if (voiceActivity.started) {
+            debugLog('🎤 Voice detected! Analyzing...', 'info');
+            isCurrentlySpeaking = true;
+            speechBuffer = [];
+          }
+
+          if (voiceActivity.active && data.volume > 0.04) {
+            const formants = AudioEngine.getFormants();
+            if (formants.length >= 2) {
+              speechBuffer.push(formants);
+              lastPhoneticScore = AudioEngine.scorePhoneme(GameEngine.currentPhoneme, formants).score;
+            }
+          }
+
+          if (voiceActivity.ended) {
+            isCurrentlySpeaking = false;
+            const duration = voiceActivity.duration;
+
+            if (duration > 200 && speechBuffer.length > 3) {
+              const stableFormants = AudioEngine.getStableFormants();
+              const target = GameEngine.currentPhoneme || '';
+
+              if (target) {
+                // *** CRITICAL FIX: Detect what the user ACTUALLY said ***
+                const detected = AudioEngine.detectClosestPhoneme(stableFormants, practiceLanguage);
+                const detectedPhoneme = detected.phoneme;
+
+                // Score against the target phoneme
+                const scoreResult = AudioEngine.scorePhoneme(target, stableFormants);
+                const score = scoreResult.score;
+
+                // Check if what was detected matches the target
+                const isMatch = detectedPhoneme === target;
+                const finalScore = isMatch ? score : Math.max(0, score - 20);
+
+                debugLog(`🎤 Detected: "${detectedPhoneme}" | Target: "${target}" | Match: ${isMatch} | Score: ${finalScore}%`,
+                  isMatch ? (finalScore >= 75 ? 'success' : 'warn') : 'error');
+
+                // Show what was detected vs target — THIS IS WHAT THE USER WANTS TO SEE
+                const resultText = isMatch
+                  ? `✓ "${detectedPhoneme}" → ${finalScore}%`
+                  : `✗ You said "${detectedPhoneme}" → Target: "${target}" (${finalScore}%)`;
+                document.getElementById('speechResult').textContent = resultText;
+                document.getElementById('speechResultMobile').textContent = resultText;
+                document.getElementById('resultLabel').textContent = 'Detected:';
+                document.getElementById('resultLabelMobile').textContent = 'Detected:';
+
+                processLocalResult(detectedPhoneme, target, finalScore, isMatch);
+              }
+            } else if (duration > 200) {
+              debugLog('Voice too short — try speaking longer', 'warn');
+            }
+            speechBuffer = [];
+          }
+        }
+      };
+
+      document.getElementById('startOverlay').classList.remove('active');
+      startSelectedGame();
+
+      sessionActive = true;
+      sessionTimer = setInterval(() => {
+        timeRemaining--;
+        updateTimerDisplay();
+        if (timeRemaining <= 0) endSession();
+      }, 1000);
+
+      setTimeout(() => { if (!isMicActive) toggleMic(); }, 2000);
+
+      debugLog('🎮 Session started! Click 🎤 to begin.', 'success');
+      Utils.showToast(isKidMode ? '🎮 Say the words! 🌟' : 'Session started! Click 🎤 to begin.', 'success');
+    }
+
+    // ======== PROCESS RESULTS ========
+    function processSpeechResult(text, confidence) {
+      totalAttempts++;
+      const target = GameEngine.currentTarget || '';
+      const comparison = SpeechAPI.compareTexts(text, target);
+      const isMatch = comparison.match;
+      const score = comparison.score;
+
+      // Update the visible detected text display
+      const detectedDisplay = document.getElementById('detectedTextDisplay');
+      const detectedText = document.getElementById('detectedText');
+      const detectedLabel = document.getElementById('detectedLabel');
+      const detectedSource = document.getElementById('detectedSource');
+      
+      if (detectedText) detectedText.textContent = text;
+      if (detectedLabel) detectedLabel.textContent = 'You said:';
+      if (detectedSource) detectedSource.textContent = `Target: "${target}" | Match: ${isMatch ? 'YES' : 'NO'}`;
+      if (detectedDisplay) {
+        detectedDisplay.className = `detected-text-display visible ${isMatch ? 'match' : 'no-match'}`;
+        setTimeout(() => { if (detectedDisplay) detectedDisplay.classList.remove('visible'); }, 3000);
+      }
+
+      if (isMatch && score >= 50) totalCorrect++;
+      updateStats(score);
+      showPhoneticScore(score, isMatch);
+      GameEngine.reportSpeechResult(text, confidence, score);
+      lastPhoneticScore = 0;
+    }
+
+    function processLocalResult(detectedPhoneme, target, score, isPhonemeMatch) {
+      totalAttempts++;
+      const isCorrect = isPhonemeMatch && score >= 50;
+      if (isCorrect) totalCorrect++;
+      updateStats(isCorrect ? score : Math.max(0, score - 20));
+      showPhoneticScore(isCorrect ? score : Math.max(0, score - 20), isPhonemeMatch);
+
+      // Update the visible detected text display
+      const detectedDisplay = document.getElementById('detectedTextDisplay');
+      const detectedText = document.getElementById('detectedText');
+      const detectedLabel = document.getElementById('detectedLabel');
+      const detectedSource = document.getElementById('detectedSource');
+      
+      if (detectedText) detectedText.textContent = detectedPhoneme;
+      if (detectedLabel) detectedLabel.textContent = 'Detected:';
+      if (detectedSource) detectedSource.textContent = `Target: "${target}" | Match: ${isPhonemeMatch ? 'YES' : 'NO'}`;
+      if (detectedDisplay) {
+        detectedDisplay.className = `detected-text-display visible ${isPhonemeMatch ? 'match' : 'no-match'}`;
+        setTimeout(() => { if (detectedDisplay) detectedDisplay.classList.remove('visible'); }, 3000);
+      }
+
+      GameEngine.reportSpeechResult(detectedPhoneme, isPhonemeMatch ? 1.0 : 0.3, isCorrect ? score : Math.max(0, score - 20));
+      lastPhoneticScore = 0;
+    }
+
+    function updateStats(score) {
+      document.getElementById('lastScore').textContent = score;
+      document.getElementById('statAttempts').textContent = totalAttempts;
+      document.getElementById('statCorrect').textContent = totalCorrect;
+      const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+      document.getElementById('statAccuracy').textContent = accuracy + '%';
+      // Mobile stats
+      const attM = document.getElementById('statAttemptsMobile');
+      const accM = document.getElementById('statAccuracyMobile');
+      if (attM) attM.textContent = totalAttempts;
+      if (accM) accM.textContent = accuracy + '%';
+    }
+
+    function showPhoneticScore(score, isMatch) {
+      const el = document.getElementById('phoneticScore');
+      let level, feedback;
+      if (score >= 90) { level = 'excellent'; feedback = isMatch ? `🌟 Perfect! ${score}%` : `Great! ${score}%`; }
+      else if (score >= 75) { level = 'good'; feedback = isMatch ? `✨ Good! ${score}%` : `Good try! ${score}%`; }
+      else if (score >= 50) { level = 'fair'; feedback = `👍 OK ${score}%`; }
+      else { level = 'try_again'; feedback = `🔄 Try again ${score}%`; }
+      el.textContent = feedback;
+      el.className = `phonetic-score visible ${level}`;
+      setTimeout(() => el.classList.remove('visible'), 2000);
+    }
+
+    function updateModeBadge(mode) {
+      const badge = document.getElementById('modeBadge');
+      if (mode === 'gemini') {
+        badge.className = 'mode-badge online';
+        badge.textContent = 'GEMINI';
+        badge.style.background = 'rgba(156,39,176,0.15)';
+        badge.style.color = '#9C27B0';
+        badge.style.borderColor = 'rgba(156,39,176,0.3)';
+      } else {
+        badge.className = `mode-badge ${mode}`;
+        badge.textContent = mode === 'online' ? 'ONLINE' : 'LOCAL';
+        badge.style.background = '';
+        badge.style.color = '';
+        badge.style.borderColor = '';
+      }
+    }
+
+    // ======== GAME SELECTION ========
+    function startSelectedGame() {
+      const onScoreUpdate = (score) => {
+        document.getElementById('practiceScore').textContent = score + ' pts';
+        GameEngine.score = score;
+      };
+      const onLevelComplete = (level) => {
+        document.getElementById('practiceLevel').textContent = 'Lv' + level;
+        debugLog(`⬆️ Level ${level} reached!`, 'success');
+        Utils.showToast(isKidMode ? `🌟 Level ${level}!` : `Level ${level}!`, 'success');
+      };
+
+      switch (selectedGame) {
+        case 'syllable_jump': GameEngine.startSyllableJump(onScoreUpdate, onLevelComplete); break;
+        case 'vowel_chain': GameEngine.startVowelChain(onScoreUpdate, onLevelComplete); break;
+        case 'word_match':
+          const words = practiceLanguage === 'bn' ? GameEngine.wordPools.bn.easyWords : GameEngine.wordPools.en.easyWords;
+          GameEngine.startWordMatch(words, onScoreUpdate, onLevelComplete); break;
+        case 'pronunciation_race': GameEngine.startPronunciationRace(onScoreUpdate, onLevelComplete); break;
+        case 'sound_catch': GameEngine.startSoundCatch(onScoreUpdate, onLevelComplete); break;
+        case 'tongue_twister': GameEngine.startTongueTwister(onScoreUpdate, onLevelComplete); break;
+        default: GameEngine.startSyllableJump(onScoreUpdate, onLevelComplete);
+      }
+      document.getElementById('targetDisplay').style.display = 'block';
+    }
+
+    // ======== MIC CONTROL ========
+    function toggleMic() {
+      const btn = document.getElementById('micBtn');
+      const statusEl = document.getElementById('micStatus');
+      const statusText = document.getElementById('micStatusText');
+
+      if (isMicActive) {
+        AudioEngine.stopRecording();
+        SpeechAPI.stop();
+        btn.classList.remove('recording');
+        statusEl.className = 'mic-status not-listening';
+        statusText.textContent = 'Mic off';
+        isMicActive = false;
+        debugLog('⏹️ Mic stopped', 'info');
+      } else {
+        AudioEngine.startRecording();
+        SpeechAPI.start();
+        btn.classList.add('recording');
+        statusEl.className = 'mic-status listening';
+        statusText.textContent = SpeechAPI.useGemini ? '🔮 Gemini AI...' : (SpeechAPI.isOnlineMode ? 'Listening...' : (isLocalMode ? 'Listening (local)...' : 'Connecting...'));
+        isMicActive = true;
+        debugLog('🎤 Mic started — speak now!', 'success');
+        if (isLocalMode) debugLog('Say the target word clearly into your mic', 'info');
+        if (SpeechAPI.useGemini) debugLog('🔮 Audio being sent to Gemini AI for transcription', 'info');
+
+        // Feed audio chunks to Gemini API when recording
+        if (SpeechAPI.useGemini && AudioEngine.mediaRecorder) {
+          AudioEngine.mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) {
+              AudioEngine.recordedChunks.push(e.data);
+              SpeechAPI.feedAudioChunk(e.data);
+            }
+          };
+        }
+      }
+    }
+
+    // ======== TIMER ========
+    function updateTimerDisplay() {
+      const mins = Math.floor(timeRemaining / 60);
+      const secs = timeRemaining % 60;
+      const el = document.getElementById('practiceTimer');
+      el.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+      el.className = 'practice-timer';
+      if (timeRemaining <= 30) el.classList.add('danger');
+      else if (timeRemaining <= 60) el.classList.add('warning');
+    }
+
+    // ======== END SESSION ========
+    async function endSession() {
+      sessionActive = false;
+      clearInterval(sessionTimer);
+      if (isMicActive) toggleMic();
+      AudioEngine.stopRecording();
+      AudioEngine.stopVisualization();
+      SpeechAPI.stop();
+      GameEngine.stop();
+
+      const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
+      const score = GameEngine.score;
+      const level = GameEngine.level;
+
+      document.getElementById('finalScore').textContent = score;
+      document.getElementById('finalAccuracy').textContent = accuracy + '%';
+      document.getElementById('finalLevel').textContent = level;
+
+      buildDetailedResults();
+      document.getElementById('sessionOverlay').classList.add('active');
+
+      debugLog(`📊 Session ended — Score: ${score}, Accuracy: ${accuracy}%, Level: ${level}`, 'info');
+
+      try {
+        const history = JSON.parse(localStorage.getItem('lexisai_session_history') || '[]');
+        history.push({
+          date: new Date().toISOString(),
+          exercise_type: selectedGame,
+          language: practiceLanguage,
+          duration_minutes: practiceDuration,
+          accuracy_score: accuracy,
+          score, level,
+          mode: isLocalMode ? 'local' : 'online',
+          completed: true
+        });
+        localStorage.setItem('lexisai_session_history', JSON.stringify(history.slice(-50)));
+
+        if (!Auth.useDemoMode && getSupabase() && Auth.currentUser) {
+          const client = getSupabase();
+          await client.from('exercise_sessions').insert({
+            user_id: Auth.currentUser.id,
+            exercise_type: selectedGame,
+            language: practiceLanguage,
+            duration_minutes: practiceDuration,
+            accuracy_score: accuracy,
+            completed: true
+          });
+          await Auth.incrementDailyUsage();
+        }
+      } catch (e) {
+        debugLog('Session save error: ' + e.message, 'warn');
+      }
+    }
+
+    function buildDetailedResults() {
+      const summary = GameEngine.getSummary();
+      const breakdownEl = document.getElementById('phonemeBreakdown');
+      breakdownEl.innerHTML = '';
+
+      if (summary.totalAttempts === 0) {
+        breakdownEl.innerHTML = '<p style="color:rgba(255,255,255,0.5);font-size:0.85rem;">No attempts recorded. Click the mic button and speak!</p>';
+        return;
+      }
+
+      breakdownEl.innerHTML += `
+        <div style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+          <span style="padding:3px 8px;border-radius:8px;background:rgba(0,255,136,0.15);color:#00FF88;font-size:0.75rem;">🌟 Perfect: ${summary.excellent}</span>
+          <span style="padding:3px 8px;border-radius:8px;background:rgba(0,212,255,0.15);color:#00D4FF;font-size:0.75rem;">✨ Good: ${summary.good}</span>
+          <span style="padding:3px 8px;border-radius:8px;background:rgba(255,215,0,0.15);color:#FFD700;font-size:0.75rem;">👍 Fair: ${summary.fair}</span>
+          <span style="padding:3px 8px;border-radius:8px;background:rgba(255,68,68,0.15);color:#FF4444;font-size:0.75rem;">🔄 Practice: ${summary.poor}</span>
+        </div>`;
+
+      if (summary.weakestPhonemes.length > 0) {
+        breakdownEl.innerHTML += '<div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-bottom:0.4rem;">🔴 Needs Practice:</div>';
+        summary.weakestPhonemes.forEach(p => {
+          const color = p.avgScore >= 70 ? '#00D4FF' : p.avgScore >= 50 ? '#FFD700' : '#FF4444';
+          breakdownEl.innerHTML += `
+            <div class="phoneme-bar">
+              <span class="phoneme-label" style="color:${color}">${p.phoneme}</span>
+              <div class="bar-track"><div class="bar-fill" style="width:${p.avgScore}%;background:${color};"></div></div>
+              <span class="bar-score">${p.avgScore}%</span>
+            </div>`;
+        });
+      }
+
+      if (summary.strongestPhonemes.length > 0) {
+        breakdownEl.innerHTML += '<div style="font-size:0.8rem;color:rgba(255,255,255,0.5);margin-top:0.5rem;margin-bottom:0.4rem;">🟢 Your Strengths:</div>';
+        summary.strongestPhonemes.forEach(p => {
+          breakdownEl.innerHTML += `
+            <div class="phoneme-bar">
+              <span class="phoneme-label" style="color:#00FF88">${p.phoneme}</span>
+              <div class="bar-track"><div class="bar-fill" style="width:${p.avgScore}%;background:#00FF88;"></div></div>
+              <span class="bar-score">${p.avgScore}%</span>
+            </div>`;
+        });
+      }
+    }
+
+    function restartSession() {
+      document.getElementById('sessionOverlay').classList.remove('active');
+      document.getElementById('startOverlay').classList.add('active');
+      GameEngine.score = 0;
+      GameEngine.level = 1;
+      GameEngine.attempts = [];
+      timeRemaining = practiceDuration * 60;
+      totalAttempts = 0;
+      totalCorrect = 0;
+      lastPhoneticScore = 0;
+      isCurrentlySpeaking = false;
+      speechBuffer = [];
+      updateTimerDisplay();
+      document.getElementById('practiceScore').textContent = '0 pts';
+      document.getElementById('practiceLevel').textContent = 'Lv1';
+      document.getElementById('statAttempts').textContent = '0';
+      document.getElementById('statCorrect').textContent = '0';
+      document.getElementById('statAccuracy').textContent = '0%';
+      document.getElementById('lastScore').textContent = '--';
+      document.getElementById('speechResult').textContent = 'Waiting...';
+      document.getElementById('speechResultMobile').textContent = 'Waiting...';
+      document.getElementById('resultLabel').textContent = 'Analysis:';
+      document.getElementById('resultLabelMobile').textContent = 'Analysis:';
+      document.getElementById('volumeMeter').style.width = '0%';
+      const volMob = document.getElementById('volumeMeterMobile');
+      if (volMob) volMob.style.width = '0%';
+      const attM = document.getElementById('statAttemptsMobile');
+      const accM = document.getElementById('statAccuracyMobile');
+      if (attM) attM.textContent = '0';
+      if (accM) accM.textContent = '0%';
+      const panel = document.getElementById('debugPanel');
+      if (panel) panel.innerHTML = '<div class="debug-line info">Session reset</div>';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="i18n-title" content="profile_title">
+  <title>Profile — LexisAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mature-theme.css">
+  <link rel="stylesheet" href="css/kid-theme.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+</head>
+<body class="mature-theme">
+
+  <!-- Navigation -->
+  <nav class="navbar scrolled">
+    <div class="container">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">🎙</div>
+        <span data-i18n="app_name">LexisAI</span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="dashboard.html" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li><a href="practice.html" data-i18n="practice_title">Practice</a></li>
+        <li><a href="profile.html" class="active" data-i18n="nav_profile">Profile</a></li>
+        <li><a href="#" onclick="Auth.signOut()" data-i18n="nav_logout">Log Out</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="lang-switch active" data-lang="en">EN</button>
+        <button class="lang-switch" data-lang="bn">বাং</button>
+        <button class="mobile-menu-btn" id="mobileMenuBtn"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-page" style="padding-top:100px;">
+    <div class="container" style="max-width:800px;">
+      <h1 style="font-size:2rem;font-weight:800;margin-bottom:2rem;" data-i18n="profile_title">Your Profile</h1>
+
+      <!-- Profile Info -->
+      <div class="glass-card" style="padding:2rem;margin-bottom:1.5rem;">
+        <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;">
+          <div style="width:72px;height:72px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;" id="profileAvatar">?</div>
+          <div>
+            <h2 style="font-size:1.5rem;font-weight:700;" id="profileName">User</h2>
+            <p style="color:rgba(255,255,255,0.5);" id="profileEmail">email@example.com</p>
+          </div>
+        </div>
+
+        <form id="profileForm" onsubmit="saveProfile(event)">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+            <div class="form-group">
+              <label data-i18n="signup_name">Display Name</label>
+              <input type="text" class="form-input" id="editName" placeholder="Your name">
+            </div>
+            <div class="form-group">
+              <label data-i18n="profile_age">Age Group</label>
+              <select class="form-input" id="editAge">
+                <option value="7">Under 10 (Kid Mode)</option>
+                <option value="20">10+ (Mature Mode)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="profile_language">Language</label>
+              <select class="form-input" id="editLang">
+                <option value="en">English</option>
+                <option value="bn">বাংলা</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="profile_duration">Practice Duration</label>
+              <select class="form-input" id="editDuration">
+                <option value="2">2 minutes</option>
+                <option value="3">3 minutes</option>
+                <option value="4">4 minutes</option>
+                <option value="5">5 minutes</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="margin-top:1rem;" data-i18n="profile_save">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- Subscription Info -->
+      <div class="glass-card" style="padding:2rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+          <h3 style="font-size:1.25rem;font-weight:700;" data-i18n="profile_subscription">Subscription</h3>
+          <span id="subStatus" style="padding:4px 12px;border-radius:20px;font-size:0.8rem;font-weight:700;background:rgba(255,255,255,0.1);">Free</span>
+        </div>
+        <div id="subDetails">
+          <p style="color:rgba(255,255,255,0.5);">You are on the free plan with 3 exercises per day.</p>
+          <a href="subscription.html" class="btn btn-primary btn-sm" style="margin-top:1rem;">Upgrade Plan</a>
+        </div>
+      </div>
+
+      <!-- Progress Overview -->
+      <div class="glass-card" style="padding:2rem;margin-bottom:1.5rem;">
+        <h3 style="font-size:1.25rem;font-weight:700;margin-bottom:1.5rem;" data-i18n="dashboard_stats">Your Statistics</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;">
+          <div style="text-align:center;">
+            <div style="font-size:2rem;font-weight:800;background:var(--gradient-primary);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="profileAccuracy">72%</div>
+            <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);" data-i18n="dashboard_accuracy">Accuracy</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:2rem;font-weight:800;background:linear-gradient(135deg,#FF2D95,#FF6B35);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="profileStreak">5</div>
+            <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);" data-i18n="dashboard_streak">Day Streak</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:2rem;font-weight:800;background:linear-gradient(135deg,#00FF88,#00D4FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;" id="profileTotal">24</div>
+            <div style="font-size:0.85rem;color:rgba(255,255,255,0.5);" data-i18n="dashboard_total">Total Sessions</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="glass-card" style="padding:2rem;border-color:rgba(255,68,68,0.2);">
+        <h3 style="font-size:1.1rem;font-weight:700;color:#FF4444;margin-bottom:0.5rem;">Danger Zone</h3>
+        <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;margin-bottom:1rem;">Deleting your account is permanent and cannot be undone.</p>
+        <button class="btn btn-sm" style="background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);color:#FF4444;" data-i18n="profile_delete">Delete Account</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dev-badge" id="devBadge">DEV MODE</div>
+  <div class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/subscription.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      initSupabase();
+      i18n.init();
+      Auth.init();
+      initLanguageSwitcher();
+
+      // Mobile menu
+      const btn = document.getElementById('mobileMenuBtn');
+      const nav = document.getElementById('navLinks');
+      if (btn && nav) {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('active');
+          nav.classList.toggle('active');
+        });
+      }
+
+      // Require auth (works in both demo and Supabase mode)
+      if (!Auth.currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      await Auth.loadUserProfile();
+      const profile = Auth.userProfile;
+
+      if (profile) {
+        // Apply theme
+        if (profile.age < 10) {
+          document.body.className = 'kid-theme';
+        }
+
+        // Fill form
+        document.getElementById('editName').value = profile.display_name || '';
+        document.getElementById('editAge').value = profile.age < 10 ? '7' : '20';
+        document.getElementById('editLang').value = profile.language_preference || 'en';
+        document.getElementById('editDuration').value = Utils.getLocal('practice_duration') || 3;
+        
+        // Avatar
+        const initial = (profile.display_name || '?')[0].toUpperCase();
+        document.getElementById('profileAvatar').textContent = initial;
+        document.getElementById('profileName').textContent = profile.display_name || 'User';
+        document.getElementById('profileEmail').textContent = Auth.currentUser?.email || 'demo@lexisai.app';
+
+        // Subscription
+        const subEl = document.getElementById('subStatus');
+        const subDetails = document.getElementById('subDetails');
+        if (profile.subscription_status === 'yearly') {
+          subEl.textContent = 'Yearly';
+          subEl.style.background = 'rgba(123,47,247,0.2)';
+          subEl.style.color = '#9B59FF';
+          subDetails.innerHTML = '<p style="color:rgba(255,255,255,0.7);">You have full access to all features. Your subscription renews annually.</p>';
+        } else if (profile.subscription_status === 'monthly') {
+          subEl.textContent = 'Monthly';
+          subEl.style.background = 'rgba(0,212,255,0.2)';
+          subEl.style.color = '#00D4FF';
+          subDetails.innerHTML = '<p style="color:rgba(255,255,255,0.7);">You have full access to all features. Your subscription renews monthly.</p>';
+        }
+
+        // Dev mode badge
+        document.getElementById('devBadge').classList.add('visible');
+        document.getElementById('devBadge').addEventListener('dblclick', () => {
+          Auth.updateUserProfile({ subscription_status: 'yearly' });
+          Utils.showToast('Developer premium activated!', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        });
+      }
+    });
+
+    async function saveProfile(e) {
+      e.preventDefault();
+      const name = document.getElementById('editName').value;
+      const age = parseInt(document.getElementById('editAge').value);
+      const lang = document.getElementById('editLang').value;
+      const duration = parseInt(document.getElementById('editDuration').value);
+
+      const theme = age < 10 ? 'kid' : 'mature';
+      
+      await i18n.setLanguage(lang);
+      Utils.setLocal('practice_duration', duration);
+
+      const result = await Auth.updateUserProfile({
+        display_name: name,
+        age: age,
+        language_preference: lang,
+        theme: theme
+      });
+
+      if (result.success) {
+        Utils.showToast('Profile updated!', 'success');
+        // Refresh page to apply theme
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        Utils.showToast('Failed to update profile', 'error');
+      }
+    }
+  </script>
+</body>
+</html>

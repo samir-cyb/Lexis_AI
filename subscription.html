@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subscription — LexisAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mature-theme.css">
+  <link rel="stylesheet" href="css/kid-theme.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎙</text></svg>">
+</head>
+<body class="mature-theme">
+
+  <!-- Navigation -->
+  <nav class="navbar scrolled">
+    <div class="container">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">🎙</div>
+        <span data-i18n="app_name">LexisAI</span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="dashboard.html" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li><a href="practice.html" data-i18n="practice_title">Practice</a></li>
+        <li><a href="profile.html" data-i18n="nav_profile">Profile</a></li>
+        <li><a href="#" onclick="Auth.signOut()" data-i18n="nav_logout">Log Out</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="lang-switch active" data-lang="en">EN</button>
+        <button class="lang-switch" data-lang="bn">বাং</button>
+        <button class="mobile-menu-btn" id="mobileMenuBtn"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-page" style="padding-top:100px;">
+    <div class="container" style="max-width:900px;">
+      <div style="text-align:center;margin-bottom:3rem;">
+        <h1 style="font-size:2.5rem;font-weight:800;margin-bottom:0.5rem;">Choose Your Plan</h1>
+        <p style="color:rgba(255,255,255,0.5);">Start free, upgrade when you're ready. Cancel anytime.</p>
+      </div>
+
+      <!-- Currency Toggle -->
+      <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2rem;">
+        <button class="btn btn-sm currency-toggle active" id="usdToggle" onclick="toggleCurrency('USD')">USD ($)</button>
+        <button class="btn btn-sm currency-toggle" id="bdtToggle" onclick="toggleCurrency('BDT')">BDT (৳)</button>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Free Plan -->
+        <div class="glass-card pricing-card" id="freeCard">
+          <h3>Free</h3>
+          <div class="pricing-price">
+            <span class="pricing-amount">$0</span>
+            <span class="pricing-period">/forever</span>
+          </div>
+          <ul class="pricing-features">
+            <li>3 exercises per day</li>
+            <li>Basic phoneme analysis</li>
+            <li>Progress tracking</li>
+            <li>Bangla & English</li>
+          </ul>
+          <button class="btn btn-secondary" style="width:100%;" disabled>Current Plan</button>
+        </div>
+
+        <!-- Monthly Plan -->
+        <div class="glass-card pricing-card featured" id="monthlyCard">
+          <div class="pricing-popular">Popular</div>
+          <h3>Monthly</h3>
+          <div class="pricing-price">
+            <span class="pricing-amount" id="monthlyPrice">$9.99</span>
+            <span class="pricing-period">/month</span>
+          </div>
+          <ul class="pricing-features">
+            <li>Unlimited exercises</li>
+            <li>Advanced phoneme analysis</li>
+            <li>All game types</li>
+            <li>Voice recording storage</li>
+            <li>Priority support</li>
+          </ul>
+          <button class="btn btn-primary" style="width:100%;" onclick="handleSubscribe('monthly')">Subscribe Monthly</button>
+        </div>
+
+        <!-- Yearly Plan -->
+        <div class="glass-card pricing-card" id="yearlyCard">
+          <h3>Yearly</h3>
+          <div class="pricing-price">
+            <span class="pricing-amount" id="yearlyPrice">$79.99</span>
+            <span class="pricing-period">/year</span>
+          </div>
+          <ul class="pricing-features">
+            <li>Everything in Monthly</li>
+            <li>Save 33% annually</li>
+            <li>Early access to new features</li>
+            <li>Personalized curriculum</li>
+            <li>Export progress reports</li>
+          </ul>
+          <button class="btn btn-accent" style="width:100%;" onclick="handleSubscribe('yearly')">Subscribe Yearly</button>
+        </div>
+      </div>
+
+      <!-- bKash Section -->
+      <div style="text-align:center;margin-top:2rem;padding:1.5rem;border-radius:16px;background:rgba(226,19,110,0.08);border:1px solid rgba(226,19,110,0.2);">
+        <p style="margin-bottom:1rem;color:rgba(255,255,255,0.7);">For users in Bangladesh</p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+          <button class="btn btn-secondary" onclick="handleBkashPayment('monthly')" style="border-color:#E2136E;color:#E2136E;">
+            <span style="font-weight:800;margin-right:8px;">bKash</span> Monthly - ৳899
+          </button>
+          <button class="btn btn-secondary" onclick="handleBkashPayment('yearly')" style="border-color:#E2136E;color:#E2136E;">
+            <span style="font-weight:800;margin-right:8px;">bKash</span> Yearly - ৳7,199
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dev-badge" id="devBadge">DEV MODE</div>
+  <div class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/subscription.js"></script>
+
+  <style>
+    .currency-toggle {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.5);
+    }
+    .currency-toggle.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+  </style>
+
+  <script>
+    let currentCurrency = 'USD';
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initSupabase();
+      i18n.init();
+      Auth.init();
+      initLanguageSwitcher();
+
+      // Mobile menu
+      const btn = document.getElementById('mobileMenuBtn');
+      const nav = document.getElementById('navLinks');
+      if (btn && nav) {
+        btn.addEventListener('click', () => {
+          btn.classList.toggle('active');
+          nav.classList.toggle('active');
+        });
+      }
+
+      // Require auth (works in both demo and Supabase mode)
+      if (!Auth.currentUser) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      await Auth.loadUserProfile();
+      const profile = Auth.userProfile;
+
+      if (profile) {
+        if (profile.age < 10) {
+          document.body.className = 'kid-theme';
+        }
+
+        // Update current plan indicator
+        if (profile.subscription_status === 'free') {
+          document.querySelector('#freeCard button').textContent = 'Current Plan';
+          document.querySelector('#freeCard button').disabled = true;
+        } else if (profile.subscription_status === 'monthly') {
+          document.querySelector('#monthlyCard button').textContent = 'Current Plan';
+          document.querySelector('#monthlyCard button').disabled = true;
+          document.querySelector('#monthlyCard button').classList.remove('btn-primary');
+          document.querySelector('#monthlyCard button').classList.add('btn-secondary');
+        } else if (profile.subscription_status === 'yearly') {
+          document.querySelector('#yearlyCard button').textContent = 'Current Plan';
+          document.querySelector('#yearlyCard button').disabled = true;
+          document.querySelector('#yearlyCard button').classList.remove('btn-accent');
+          document.querySelector('#yearlyCard button').classList.add('btn-secondary');
+        }
+
+        // Dev mode badge
+        document.getElementById('devBadge').classList.add('visible');
+        document.getElementById('devBadge').addEventListener('dblclick', () => {
+          Auth.updateUserProfile({ subscription_status: 'yearly' });
+          Utils.showToast('Developer premium activated!', 'success');
+          setTimeout(() => window.location.reload(), 500);
+        });
+      }
+
+      // Animate pricing cards
+      if (typeof gsap !== 'undefined') {
+        gsap.from('.pricing-card', {
+          y: 40,
+          opacity: 0,
+          duration: 0.6,
+          stagger: 0.15,
+          ease: 'power3.out'
+        });
+      }
+    });
+
+    function toggleCurrency(currency) {
+      currentCurrency = currency;
+      document.getElementById('usdToggle').classList.toggle('active', currency === 'USD');
+      document.getElementById('bdtToggle').classList.toggle('active', currency === 'BDT');
+
+      if (currency === 'USD') {
+        document.getElementById('monthlyPrice').textContent = '$9.99';
+        document.getElementById('yearlyPrice').textContent = '$79.99';
+      } else {
+        document.getElementById('monthlyPrice').textContent = '৳899';
+        document.getElementById('yearlyPrice').textContent = '৳7,199';
+      }
+    }
+
+    async function handleSubscribe(planId) {
+      const result = await Subscription.initiateStripePayment(planId);
+      if (result?.error) {
+        Utils.showToast(result.error, 'error');
+      }
+    }
+
+    async function handleBkashPayment(planId) {
+      const result = await Subscription.initiateBkashPayment(planId);
+      if (result?.error) {
+        Utils.showToast(result.error, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
