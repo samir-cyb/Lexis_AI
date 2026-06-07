@@ -77,6 +77,19 @@
         <button type="submit" class="btn btn-primary" style="width:100%;" id="signupBtn" data-i18n="signup_button">Create Account</button>
       </form>
 
+      <!-- Email Confirmation Notice -->
+      <div id="emailConfirmNotice" style="display:none;margin-top:1.5rem;padding:1.25rem;border-radius:12px;background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.25);text-align:center;">
+        <div style="font-size:2.5rem;margin-bottom:0.5rem;">📧</div>
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;">Check Your Email!</h3>
+        <p style="font-size:0.9rem;color:rgba(255,255,255,0.7);margin-bottom:0.75rem;" id="confirmEmailText">
+          We sent a confirmation link to your email. Click it to verify your account, then come back and log in.
+        </p>
+        <p style="font-size:0.8rem;color:rgba(255,255,255,0.4);">
+          Don't see it? Check your spam/junk folder.
+        </p>
+        <a href="login.html" class="btn btn-primary" style="margin-top:1rem;">Go to Login</a>
+      </div>
+
       <!-- Demo mode notice -->
       <div id="demoNotice" style="display:none;margin-top:1rem;padding:0.75rem;border-radius:10px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);font-size:0.8rem;color:rgba(255,255,255,0.6);text-align:center;">
         🔧 Demo Mode: Accounts are stored locally on this device.
@@ -93,6 +106,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/i18n.js"></script>
@@ -100,10 +114,15 @@
   <script src="js/subscription.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       initSupabase();
       i18n.init();
-      Auth.init();
+
+      // AWAIT auth init — no more race conditions
+      await Auth.init();
+
+      console.log('%c[SIGNUP] Auth ready. currentUser:', 'color:#00FF88;', Auth.currentUser?.email || 'none');
+      console.log('%c[SIGNUP] Profile:', 'color:#7B47F6;', Auth.userProfile);
 
       // Show/hide UI based on demo mode
       if (Auth.isDemoMode()) {
@@ -113,19 +132,21 @@
         document.getElementById('demoNotice').style.display = 'block';
       }
 
-      // If already logged in, redirect
+      // If already logged in, redirect smartly
       if (Auth.currentUser) {
-        window.location.href = 'onboarding.html';
+        if (Auth.needsOnboarding()) {
+          console.log('%c[SIGNUP] Already logged in, needs onboarding → redirecting', 'color:#FFD700;');
+          window.location.href = 'onboarding.html';
+        } else {
+          console.log('%c[SIGNUP] Already logged in → dashboard', 'color:#00FF88;');
+          window.location.href = 'dashboard.html';
+        }
+        return; // STOP — don't render the form
       }
 
       // Entrance animation
       if (typeof gsap !== 'undefined') {
-        gsap.from('.auth-card', {
-          scale: 0.95,
-          opacity: 0,
-          duration: 0.6,
-          ease: 'power3.out'
-        });
+        gsap.from('.auth-card', { scale: 0.95, opacity: 0, duration: 0.6, ease: 'power3.out' });
       }
     });
 
@@ -153,15 +174,28 @@
       btn.innerHTML = '<div class="spinner"></div>';
       btn.disabled = true;
 
+      console.log('%c[SIGNUP] Submitting...', 'color:#7B47F6;', { email, name });
+
       const result = await Auth.signUp(email, password, name);
+
+      console.log('%c[SIGNUP] Result:', 'color:#7B47F6;', result);
 
       if (result.error) {
         Utils.showToast(result.error, 'error');
         btn.textContent = i18n.t('signup_button');
         btn.disabled = false;
+      } else if (result.needsConfirmation) {
+        document.getElementById('signupForm').style.display = 'none';
+        document.getElementById('socialButtons').style.display = 'none';
+        document.getElementById('socialDivider').style.display = 'none';
+        document.getElementById('emailConfirmNotice').style.display = 'block';
+        document.getElementById('confirmEmailText').textContent =
+          'We sent a confirmation link to ' + email + '. Click it to verify your account, then come back and log in.';
+        Utils.showToast('Confirmation email sent! Check your inbox.', 'success');
       } else {
-        Utils.showToast('Account created! Let\'s set up your profile.', 'success');
-        setTimeout(() => window.location.href = 'onboarding.html', 500);
+        // Auto-confirmed — go to onboarding
+        Utils.showToast('Account created! Setting up your profile...', 'success');
+        setTimeout(() => window.location.href = 'onboarding.html', 800);
       }
     }
   </script>

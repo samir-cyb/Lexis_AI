@@ -48,18 +48,20 @@ const TherapyEngine = {
         attempts: 0,
         avgScore: 0,
         trend: 'stable',
-        scoreHistory: []
+        scoreHistory: [] // entries are {s: score, t: timestamp}
       };
     }
 
     var data = this.phonemeScores[phoneme];
     data.attempts++;
-    data.scoreHistory.push(score);
+    // Store score WITH timestamp so _getPhonemeScoreAt can do real time-based analysis
+    data.scoreHistory.push({ s: score, t: Date.now() });
 
-    // Recalculate average score
+    // Recalculate average score (handle both old {s,t} format and legacy plain numbers)
     var total = 0;
     for (var i = 0; i < data.scoreHistory.length; i++) {
-      total += data.scoreHistory[i];
+      var entry = data.scoreHistory[i];
+      total += (typeof entry === 'object' ? entry.s : entry);
     }
     data.avgScore = Math.round(total / data.scoreHistory.length);
 
@@ -81,14 +83,18 @@ const TherapyEngine = {
    * @returns {string} 'improving', 'declining', or 'stable'
    * @private
    */
+  _getScore(entry) {
+    return typeof entry === 'object' ? entry.s : entry;
+  },
+
   _calculateTrend(scoreHistory) {
     if (scoreHistory.length < 6) {
       return 'stable';
     }
 
     var len = scoreHistory.length;
-    var lastThree = scoreHistory[len - 3] + scoreHistory[len - 2] + scoreHistory[len - 1];
-    var prevThree = scoreHistory[len - 6] + scoreHistory[len - 5] + scoreHistory[len - 4];
+    var lastThree = this._getScore(scoreHistory[len - 3]) + this._getScore(scoreHistory[len - 2]) + this._getScore(scoreHistory[len - 1]);
+    var prevThree = this._getScore(scoreHistory[len - 6]) + this._getScore(scoreHistory[len - 5]) + this._getScore(scoreHistory[len - 4]);
 
     var lastAvg = lastThree / 3;
     var prevAvg = prevThree / 3;
@@ -661,11 +667,18 @@ const TherapyEngine = {
       return 0;
     }
 
-    // Since scoreHistory doesn't store timestamps per score,
-    // we estimate based on proportional position relative to session dates
-    // For a simpler approach, we return the current score as an approximation
-    // In a more robust implementation, each score would be timestamped
-    return data.avgScore;
+    // Use only entries recorded BEFORE the given timestamp
+    var entriesBefore = data.scoreHistory.filter(function(entry) {
+      return typeof entry === 'object' ? entry.t <= timestamp : true; // legacy plain numbers included
+    });
+
+    if (entriesBefore.length === 0) return 0;
+
+    var total = 0;
+    for (var i = 0; i < entriesBefore.length; i++) {
+      total += (typeof entriesBefore[i] === 'object' ? entriesBefore[i].s : entriesBefore[i]);
+    }
+    return Math.round(total / entriesBefore.length);
   },
 
   // =========================================================================

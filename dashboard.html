@@ -61,21 +61,33 @@
       <!-- Stats Grid -->
       <div class="stats-grid">
         <div class="stat-card glass-card">
-          <div class="stat-value text-gradient" id="statAccuracy">72%</div>
+          <div class="stat-value text-gradient" id="statAccuracy">—</div>
           <div class="stat-label" data-i18n="dashboard_accuracy">Accuracy</div>
         </div>
         <div class="stat-card glass-card">
-          <div class="stat-value text-gradient" id="statStreak" style="background:linear-gradient(135deg,#FF2D95,#FF6B35);-webkit-background-clip:text;">5</div>
+          <div class="stat-value text-gradient" id="statStreak" style="background:linear-gradient(135deg,#FF2D95,#FF6B35);-webkit-background-clip:text;">—</div>
           <div class="stat-label" data-i18n="dashboard_streak">Day Streak</div>
         </div>
         <div class="stat-card glass-card">
-          <div class="stat-value text-gradient" id="statTotal" style="background:linear-gradient(135deg,#00FF88,#00D4FF);-webkit-background-clip:text;">24</div>
+          <div class="stat-value text-gradient" id="statTotal" style="background:linear-gradient(135deg,#00FF88,#00D4FF);-webkit-background-clip:text;">—</div>
           <div class="stat-label" data-i18n="dashboard_total">Total Sessions</div>
         </div>
         <div class="stat-card glass-card">
-          <div class="stat-value text-gradient" id="statTime" style="background:linear-gradient(135deg,#FFD700,#FF6B35);-webkit-background-clip:text;">45m</div>
+          <div class="stat-value text-gradient" id="statTime" style="background:linear-gradient(135deg,#FFD700,#FF6B35);-webkit-background-clip:text;">—</div>
           <div class="stat-label">Practice Time</div>
         </div>
+      </div>
+
+      <!-- Weak Sounds / Practice Your Gaps -->
+      <div id="weakSoundsSection" class="glass-card" style="margin-bottom:2rem;padding:1.5rem;display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.75rem;">
+          <div>
+            <h3 style="font-size:1.1rem;font-weight:700;margin:0;">🔴 Sounds to Work On</h3>
+            <p style="color:rgba(255,255,255,0.5);font-size:0.85rem;margin:0.25rem 0 0;">Based on your recent sessions</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="practiceGaps()">🎯 Practice These Now</button>
+        </div>
+        <div id="weakPhonemesList" style="display:flex;gap:0.75rem;flex-wrap:wrap;"></div>
       </div>
 
       <!-- Main Grid -->
@@ -151,30 +163,36 @@
           </div>
 
           <!-- Recent Sessions -->
-          <div class="glass-card">
+          <div class="glass-card" style="margin-bottom:1.5rem;">
             <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1rem;" data-i18n="dashboard_history">Recent Sessions</h3>
             <div id="recentSessions">
-              <div style="padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <div style="font-size:0.9rem;font-weight:500;">Vowel Chain</div>
-                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Today, 2:30 PM</div>
-                </div>
-                <div style="color:var(--success);font-weight:700;">82%</div>
+              <p style="color:rgba(255,255,255,0.4);font-size:0.85rem;text-align:center;padding:1rem 0;">No sessions yet — start your first practice!</p>
+            </div>
+          </div>
+
+          <!-- XP / Level / Daily Mission -->
+          <div class="glass-card" id="rewardsCard" style="display:none;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+              <div>
+                <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.35);">YOUR PROGRESS</div>
+                <div id="rewardLevel" style="font-size:1.25rem;font-weight:800;"></div>
               </div>
-              <div style="padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <div style="font-size:0.9rem;font-weight:500;">Syllable Jump</div>
-                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Today, 1:15 PM</div>
-                </div>
-                <div style="color:var(--warning);font-weight:700;">68%</div>
-              </div>
-              <div style="padding:0.75rem 0;display:flex;justify-content:space-between;align-items:center;">
-                <div>
-                  <div style="font-size:0.9rem;font-weight:500;">Word Match</div>
-                  <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">Yesterday, 4:00 PM</div>
-                </div>
-                <div style="color:var(--success);font-weight:700;">91%</div>
-              </div>
+              <div id="rewardXP" style="font-size:0.85rem;color:rgba(255,255,255,0.5);text-align:right;"></div>
+            </div>
+            <!-- XP progress bar -->
+            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-bottom:1rem;">
+              <div id="xpProgressBar" style="height:100%;border-radius:3px;background:var(--gradient-primary);transition:width 0.6s ease;width:0%;"></div>
+            </div>
+            <!-- Daily mission -->
+            <div id="dailyMissionCard" style="background:rgba(0,212,255,0.07);border:1px solid rgba(0,212,255,0.15);border-radius:10px;padding:0.6rem 0.75rem;font-size:0.82rem;margin-bottom:0.75rem;display:none;">
+              <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(0,212,255,0.6);margin-bottom:3px;">DAILY MISSION</div>
+              <div id="dailyMissionText" style="color:rgba(255,255,255,0.85);"></div>
+              <div id="dailyMissionProgress" style="color:rgba(0,212,255,0.7);font-size:0.75rem;margin-top:2px;"></div>
+            </div>
+            <!-- Earned badges -->
+            <div id="earnedBadgesSection" style="display:none;">
+              <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.35);margin-bottom:0.5rem;">BADGES EARNED</div>
+              <div id="earnedBadgesList" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
             </div>
           </div>
         </div>
@@ -188,11 +206,13 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/i18n.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/subscription.js"></script>
+  <script src="js/reward-system.js"></script>
 
   <style>
     .practice-lang-btn, .duration-btn {
@@ -259,9 +279,12 @@
     document.addEventListener('DOMContentLoaded', async () => {
       initSupabase();
       i18n.init();
-      Auth.init();
 
-      // Language switcher
+      // AWAIT auth init — no more race conditions
+      await Auth.init();
+
+      console.log('%c[DASHBOARD] Auth ready. currentUser:', 'color:#00FF88;', Auth.currentUser?.email || 'none');
+
       initLanguageSwitcher();
 
       // Mobile menu
@@ -274,28 +297,29 @@
         });
       }
 
-      // Require auth (works in both demo and Supabase mode)
       if (!Auth.currentUser) {
         window.location.href = 'login.html';
         return;
       }
 
-      await Auth.loadUserProfile();
+      if (Auth.needsOnboarding()) {
+        Utils.showToast('Let\'s set up your profile first!', 'info');
+        setTimeout(() => window.location.href = 'onboarding.html', 500);
+        return;
+      }
+
       const profile = Auth.userProfile;
 
       if (profile) {
-        // Apply theme
-        if (profile.age < 10) {
+        if (profile.age && profile.age < 10) {
           document.body.className = 'kid-theme';
           isKidMode = true;
         }
 
-        // Update greeting
         const name = profile.display_name || 'there';
         document.getElementById('userGreeting').textContent =
           isKidMode ? `Hi ${name}! 🌟 Let's practice!` : `Welcome back, ${name}`;
 
-        // Check daily limit
         const limit = await Auth.checkDailyLimit();
         if (limit.unlimited) {
           document.getElementById('exercisesLeft').textContent = 'Unlimited';
@@ -303,12 +327,10 @@
           document.getElementById('exercisesLeft').textContent = `${limit.remaining} exercises left today`;
         }
 
-        // Show upgrade banner for free users
         if (profile.subscription_status === 'free') {
           document.getElementById('upgradeBanner').style.display = 'flex';
         }
 
-        // Dev mode badge
         document.getElementById('devBadge').classList.add('visible');
         document.getElementById('devBadge').addEventListener('dblclick', () => {
           Auth.updateUserProfile({ subscription_status: 'yearly' });
@@ -317,13 +339,171 @@
         });
       }
 
-      // Entrance animations
+      // ── Load real data from localStorage ─────────────────────────────────────
+      loadRealStats();
+      loadRecentSessions();
+      loadWeakSounds();
+      loadRewards();
+      // ─────────────────────────────────────────────────────────────────────────
+
       if (typeof gsap !== 'undefined') {
         gsap.from('.dashboard-header', { y: 20, opacity: 0, duration: 0.5, ease: 'power3.out' });
         gsap.from('.stat-card', { y: 30, opacity: 0, duration: 0.5, stagger: 0.1, ease: 'power3.out', delay: 0.2 });
         gsap.from('.game-card', { y: 30, opacity: 0, duration: 0.4, stagger: 0.08, ease: 'power3.out', delay: 0.4 });
       }
     });
+
+    // ── Real data loaders ─────────────────────────────────────────────────────
+
+    function loadRealStats() {
+      const history = JSON.parse(localStorage.getItem('lexisai_session_history') || '[]');
+      if (history.length === 0) {
+        document.getElementById('statAccuracy').textContent = '—';
+        document.getElementById('statStreak').textContent = '—';
+        document.getElementById('statTotal').textContent = '0';
+        document.getElementById('statTime').textContent = '0m';
+        return;
+      }
+
+      // Accuracy: average of last 10 sessions
+      const recent = history.slice(-10);
+      const avgAcc = Math.round(recent.reduce((s, h) => s + (h.accuracy_score || 0), 0) / recent.length);
+      document.getElementById('statAccuracy').textContent = avgAcc + '%';
+
+      // Total sessions
+      document.getElementById('statTotal').textContent = history.length;
+
+      // Practice time (sum of duration_minutes)
+      const totalMin = history.reduce((s, h) => s + (h.duration_minutes || 0), 0);
+      document.getElementById('statTime').textContent = totalMin >= 60
+        ? Math.round(totalMin / 60) + 'h ' + (totalMin % 60) + 'm'
+        : totalMin + 'm';
+
+      // Streak: count consecutive calendar days up to today
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const sessionDays = new Set(history.map(h => {
+        const d = new Date(h.date); d.setHours(0, 0, 0, 0);
+        return d.getTime();
+      }));
+      let streak = 0;
+      let check = new Date(today);
+      while (sessionDays.has(check.getTime())) {
+        streak++;
+        check.setDate(check.getDate() - 1);
+      }
+      document.getElementById('statStreak').textContent = streak;
+    }
+
+    function loadRecentSessions() {
+      const history = JSON.parse(localStorage.getItem('lexisai_session_history') || '[]');
+      const container = document.getElementById('recentSessions');
+      if (history.length === 0) {
+        container.innerHTML = '<p style="color:rgba(255,255,255,0.4);font-size:0.85rem;text-align:center;padding:1rem 0;">No sessions yet — start your first practice!</p>';
+        return;
+      }
+
+      const gameLabels = {
+        syllable_jump: '🏃 Syllable Jump',
+        vowel_chain: '🔗 Vowel Chain',
+        word_match: '🎯 Word Match',
+        pronunciation_race: '🏎️ Pronunciation Race',
+        sound_catch: '🪤 Sound Catch',
+        tongue_twister: '👅 Tongue Twister'
+      };
+
+      const last5 = history.slice(-5).reverse();
+      container.innerHTML = last5.map((s, i) => {
+        const acc = s.accuracy_score || 0;
+        const color = acc >= 80 ? 'var(--success)' : acc >= 60 ? 'var(--warning)' : '#FF4444';
+        const label = gameLabels[s.exercise_type] || s.exercise_type || 'Practice';
+        const date = new Date(s.date);
+        const now = new Date();
+        const diffDays = Math.floor((now - date) / 86400000);
+        const timeStr = diffDays === 0
+          ? 'Today, ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : diffDays === 1 ? 'Yesterday'
+          : diffDays + ' days ago';
+        const isLast = i === last5.length - 1;
+        return `<div style="padding:0.75rem 0;${isLast ? '' : 'border-bottom:1px solid rgba(255,255,255,0.05);'}display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-size:0.9rem;font-weight:500;">${label}</div>
+            <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);">${timeStr}</div>
+          </div>
+          <div style="color:${color};font-weight:700;">${acc}%</div>
+        </div>`;
+      }).join('');
+    }
+
+    function loadRewards() {
+      if (typeof RewardSystem === 'undefined') return;
+      const stats = RewardSystem.getStats();
+      if (stats.totalSessions === 0 && stats.earnedBadges.length === 0) return;
+
+      const card = document.getElementById('rewardsCard');
+      card.style.display = 'block';
+
+      document.getElementById('rewardLevel').textContent = `⭐ Level ${stats.level}`;
+      const xpForNext = stats.xpForNextLevel;
+      const xpInLevel = stats.xp % 100;
+      document.getElementById('rewardXP').innerHTML = `${stats.xp} XP<br><span style="font-size:0.75rem;">${xpForNext} to next level</span>`;
+      document.getElementById('xpProgressBar').style.width = (xpInLevel) + '%';
+
+      // Daily mission
+      if (stats.dailyMission) {
+        const m = stats.dailyMission;
+        document.getElementById('dailyMissionCard').style.display = 'block';
+        document.getElementById('dailyMissionText').textContent = m.descriptionEn;
+        document.getElementById('dailyMissionProgress').textContent =
+          m.completed ? '✅ Completed!' : `Progress: ${m.progress || 0} / ${m.target}`;
+      }
+
+      // Earned badges
+      if (stats.earnedBadges.length > 0) {
+        document.getElementById('earnedBadgesSection').style.display = 'block';
+        const allBadges = RewardSystem.badges;
+        const earned = allBadges.filter(b => stats.earnedBadges.includes(b.id));
+        document.getElementById('earnedBadgesList').innerHTML = earned.map(b =>
+          `<div title="${b.descriptionEn}" style="font-size:1.5rem;cursor:default;" class="badge-icon">${b.icon}</div>`
+        ).join('');
+      }
+    }
+
+    function loadWeakSounds() {
+      const phonemeProgress = JSON.parse(localStorage.getItem('lexisai_phoneme_progress') || '{}');
+      const entries = Object.values(phonemeProgress)
+        .filter(p => p.attempts >= 2)   // only show with enough data
+        .sort((a, b) => a.avgScore - b.avgScore)  // worst first
+        .slice(0, 3);
+
+      if (entries.length === 0) {
+        document.getElementById('weakSoundsSection').style.display = 'none';
+        return;
+      }
+
+      document.getElementById('weakSoundsSection').style.display = 'block';
+      const list = document.getElementById('weakPhonemesList');
+      list.innerHTML = entries.map(p => {
+        const color = p.avgScore < 40 ? '#FF4444' : p.avgScore < 60 ? '#FFD700' : '#FF9500';
+        return `<div style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;border-radius:12px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.2);">
+          <span style="font-size:1.5rem;font-weight:800;color:${color};">${p.phoneme}</span>
+          <div>
+            <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);">${p.attempts} tries</div>
+            <div style="font-size:0.8rem;font-weight:700;color:${color};">${p.avgScore}% avg</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      // Store weak phonemes so practice.html can pick them up
+      localStorage.setItem('lexisai_gap_targets', JSON.stringify(entries.map(p => p.phoneme)));
+    }
+
+    function practiceGaps() {
+      // Gap targets already saved in loadWeakSounds; practice.html will read them
+      Utils.setLocal('gap_practice_mode', '1');
+      window.location.href = 'practice.html';
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
 
     function selectPracticeLang(lang, el) {
       document.querySelectorAll('.practice-lang-btn').forEach(b => b.classList.remove('active'));
@@ -338,6 +518,8 @@
     }
 
     function startGame(gameType) {
+      localStorage.removeItem('lexisai_gap_targets');
+      Utils.setLocal('gap_practice_mode', '');
       Utils.setLocal('selected_game', gameType);
       window.location.href = 'practice.html';
     }

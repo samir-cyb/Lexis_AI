@@ -359,6 +359,37 @@
       50% { opacity:0.5; }
     }
 
+    /* ── Celebration particles ── */
+    @keyframes confettiFall {
+      0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+    .confetti-particle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      animation: confettiFall linear forwards;
+      pointer-events: none;
+    }
+    /* ── XP pop animation ── */
+    @keyframes xpPop {
+      0%   { transform: scale(0.5) translateY(0); opacity: 0; }
+      30%  { transform: scale(1.3) translateY(-10px); opacity: 1; }
+      80%  { transform: scale(1) translateY(-20px); opacity: 1; }
+      100% { transform: scale(0.9) translateY(-30px); opacity: 0; }
+    }
+    .xp-pop {
+      position: fixed;
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #FFD700;
+      text-shadow: 0 0 12px rgba(255,215,0,0.7);
+      pointer-events: none;
+      z-index: 10001;
+      animation: xpPop 1.4s ease forwards;
+    }
+
     /* ======== DEBUG VOICE TEST PANEL ======== */
     .debug-voice-btn {
       position: fixed;
@@ -595,6 +626,14 @@
             <h3>Pronunciation Breakdown</h3>
             <div id="phonemeBreakdown"></div>
           </div>
+
+          <!-- Rewards earned this session -->
+          <div id="rewardsSection" style="display:none;margin-top:0.75rem;padding:0.75rem;background:rgba(255,215,0,0.07);border:1px solid rgba(255,215,0,0.2);border-radius:12px;text-align:center;">
+            <div id="xpGainDisplay" style="font-size:1.4rem;font-weight:800;color:#FFD700;margin-bottom:0.5rem;"></div>
+            <div id="newBadgesDisplay" style="display:flex;gap:0.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:0.25rem;"></div>
+            <div id="levelUpDisplay" style="display:none;margin-top:0.5rem;padding:4px 12px;border-radius:20px;background:rgba(123,47,247,0.2);color:#9B59FF;font-weight:700;font-size:0.85rem;display:inline-block;"></div>
+          </div>
+
           <div style="display:flex;gap:0.75rem;margin-top:0.75rem;flex-wrap:wrap;justify-content:center;">
             <a href="dashboard.html" class="btn btn-secondary">Dashboard</a>
             <button class="btn btn-primary" onclick="restartSession()">Play Again</button>
@@ -608,6 +647,12 @@
 
           <div id="startModeInfo" style="margin-bottom:0.75rem;padding:8px 16px;border-radius:12px;background:rgba(255,165,0,0.1);border:1px solid rgba(255,165,0,0.3);font-size:0.8rem;color:#FFA500;">
             Local Audio Mode — Works offline!
+          </div>
+
+          <!-- Gap-practice banner: shown when user arrives from "Practice These Now" -->
+          <div id="gapPracticeBanner" style="display:none;margin-bottom:0.75rem;padding:10px 16px;border-radius:12px;background:rgba(255,68,68,0.1);border:1px solid rgba(255,68,68,0.3);">
+            <div style="font-size:0.8rem;font-weight:700;color:#FF8888;margin-bottom:4px;">🎯 Focus Session — Target Sounds:</div>
+            <div id="gapTargetChips" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
           </div>
 
           <div style="margin-bottom:0.75rem;">
@@ -708,8 +753,57 @@
 
   <div class="toast-container"></div>
 
+  <!-- ══ Celebration Overlay — shown when badges are earned ══════════════════ -->
+  <div id="celebrationOverlay" style="display:none;position:fixed;inset:0;z-index:10000;pointer-events:none;overflow:hidden;" aria-hidden="true"></div>
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+
+  <!-- ══ Solution Popup — shown after 3 consecutive failures on same phoneme ══ -->
+  <div id="solutionPopup" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);align-items:center;justify-content:center;padding:1rem;">
+    <div class="glass-card" style="max-width:440px;width:100%;padding:2rem;text-align:center;border-color:rgba(123,47,247,0.4);">
+      <div id="spStruggleLabel" style="font-size:0.7rem;font-weight:700;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-bottom:0.75rem;"></div>
+
+      <!-- Phoneme display -->
+      <div id="spPhoneme" style="font-size:4.5rem;font-weight:900;line-height:1;margin-bottom:0.25rem;"></div>
+      <div id="spPhonemeLabel" style="font-size:0.9rem;color:rgba(255,255,255,0.5);margin-bottom:1.5rem;"></div>
+
+      <!-- Mouth guide illustration -->
+      <div style="background:rgba(255,255,255,0.04);border-radius:14px;padding:1.25rem;margin-bottom:1rem;text-align:left;">
+        <div style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.35);margin-bottom:0.75rem;">HOW TO SAY IT</div>
+
+        <!-- Mouth SVG illustration -->
+        <div style="text-align:center;margin-bottom:1rem;">
+          <svg id="spMouthSvg" width="120" height="70" viewBox="0 0 120 70" style="filter:drop-shadow(0 0 8px rgba(123,47,247,0.4));">
+            <ellipse cx="60" cy="35" rx="50" ry="25" fill="rgba(255,255,255,0.07)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+            <!-- Upper lip -->
+            <path d="M15,30 Q35,20 60,25 Q85,20 105,30" stroke="rgba(255,150,150,0.7)" stroke-width="2" fill="none"/>
+            <!-- Lower lip -->
+            <path id="spLowerLip" d="M15,30 Q35,50 60,50 Q85,50 105,30" stroke="rgba(255,150,150,0.7)" stroke-width="2" fill="rgba(255,100,100,0.1)"/>
+            <!-- Tongue indicator -->
+            <ellipse id="spTongue" cx="60" cy="42" rx="15" ry="6" fill="rgba(255,180,180,0.3)" stroke="rgba(255,150,150,0.5)" stroke-width="1"/>
+            <!-- Teeth line -->
+            <line id="spTeethLine" x1="22" y1="31" x2="98" y2="31" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4,3"/>
+          </svg>
+        </div>
+
+        <div id="spTip" style="font-size:0.92rem;color:rgba(255,255,255,0.92);line-height:1.55;margin-bottom:0.75rem;"></div>
+        <div id="spMouthDetails" style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem;font-size:0.78rem;"></div>
+      </div>
+
+      <!-- Common mistake correction -->
+      <div id="spMistake" style="background:rgba(255,68,68,0.07);border:1px solid rgba(255,68,68,0.2);border-radius:10px;padding:0.6rem 0.75rem;margin-bottom:1.25rem;font-size:0.82rem;color:rgba(255,200,200,0.85);text-align:left;display:none;"></div>
+
+      <!-- Buttons -->
+      <div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;">
+        <button id="spHearBtn" class="btn btn-secondary" onclick="hearSolutionPhoneme()" style="gap:6px;">🔊 Hear it</button>
+        <button class="btn btn-primary" onclick="closeSolutionPopup()">✅ Try Again</button>
+      </div>
+    </div>
+  </div>
+  <!-- ════════════════════════════════════════════════════════════════════════ -->
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/i18n.js"></script>
@@ -719,6 +813,9 @@
   <script src="js/speech-api.js"></script>
   <script src="js/games.js"></script>
   <script src="js/rl-engine.js"></script>
+  <script src="js/therapy-engine.js"></script>
+  <script src="js/phoneme-guide.js"></script>
+  <script src="js/reward-system.js"></script>
 
   <script>
     let isKidMode = false;
@@ -726,6 +823,12 @@
     let practiceDuration = 3;
     let selectedGame = 'syllable_jump';
     let sessionActive = false;
+
+    // ── Consecutive-failure tracking for solution popup ──────────────────────
+    let _failStreak = 0;       // how many consecutive failures on current phoneme
+    let _failPhoneme = '';     // which phoneme is failing
+    const FAIL_THRESHOLD = 3;  // show popup after this many consecutive failures
+    // ────────────────────────────────────────────────────────────────────────
     let sessionTimer = null;
     let timeRemaining = 0;
     let totalAttempts = 0;
@@ -1051,6 +1154,20 @@
       });
 
       GameEngine.init('gameCanvas', isKidMode, practiceLanguage);
+
+      // Show gap-practice banner if user came from "Practice These Now"
+      const gapMode = Utils.getLocal('gap_practice_mode');
+      if (gapMode === '1') {
+        const targets = JSON.parse(localStorage.getItem('lexisai_gap_targets') || '[]');
+        if (targets.length > 0) {
+          document.getElementById('gapPracticeBanner').style.display = 'block';
+          document.getElementById('gapTargetChips').innerHTML = targets.map(t =>
+            `<span style="padding:3px 10px;border-radius:8px;background:rgba(255,68,68,0.2);border:1px solid rgba(255,68,68,0.4);color:#FF8888;font-weight:700;font-size:1rem;">${t}</span>`
+          ).join('');
+        }
+        Utils.setLocal('gap_practice_mode', ''); // clear so next visit is normal
+      }
+
       debugLog('LexisAI Practice page loaded', 'info');
       debugLog(`Language: ${practiceLanguage} | Game: ${selectedGame} | Duration: ${practiceDuration}m`, 'info');
     });
@@ -1279,7 +1396,12 @@
         setTimeout(() => { if (detectedDisplay) detectedDisplay.classList.remove('visible'); }, 3000);
       }
 
-      if (isMatch && score >= 50) totalCorrect++;
+      if (isMatch && score >= 50) {
+        totalCorrect++;
+        _failStreak = 0; // reset on success
+      } else {
+        _trackFailure(target, score);
+      }
       updateStats(score);
       showPhoneticScore(score, isMatch);
       GameEngine.reportSpeechResult(text, confidence, score);
@@ -1289,16 +1411,20 @@
     function processLocalResult(detectedPhoneme, target, score, isPhonemeMatch) {
       totalAttempts++;
       const isCorrect = isPhonemeMatch && score >= 50;
-      if (isCorrect) totalCorrect++;
+      if (isCorrect) {
+        totalCorrect++;
+        _failStreak = 0;
+      } else {
+        _trackFailure(target, score);
+      }
       updateStats(isCorrect ? score : Math.max(0, score - 20));
       showPhoneticScore(isCorrect ? score : Math.max(0, score - 20), isPhonemeMatch);
 
-      // Update the visible detected text display
       const detectedDisplay = document.getElementById('detectedTextDisplay');
       const detectedText = document.getElementById('detectedText');
       const detectedLabel = document.getElementById('detectedLabel');
       const detectedSource = document.getElementById('detectedSource');
-      
+
       if (detectedText) detectedText.textContent = detectedPhoneme;
       if (detectedLabel) detectedLabel.textContent = 'Detected:';
       if (detectedSource) detectedSource.textContent = `Target: "${target}" | Match: ${isPhonemeMatch ? 'YES' : 'NO'}`;
@@ -1310,6 +1436,242 @@
       GameEngine.reportSpeechResult(detectedPhoneme, isPhonemeMatch ? 1.0 : 0.3, isCorrect ? score : Math.max(0, score - 20));
       lastPhoneticScore = 0;
     }
+
+    // ── Reward display ───────────────────────────────────────────────────────
+
+    function showSessionRewards(rewardResult, accuracy) {
+      if (!rewardResult) return;
+      const section = document.getElementById('rewardsSection');
+      if (!section) return;
+
+      // XP gained
+      const xpEl = document.getElementById('xpGainDisplay');
+      if (xpEl && rewardResult.xpGained > 0) {
+        xpEl.textContent = `+${rewardResult.xpGained} XP`;
+        showXPPopAnimation(rewardResult.xpGained);
+      }
+
+      // New badges
+      const badgesEl = document.getElementById('newBadgesDisplay');
+      if (badgesEl && rewardResult.newBadges && rewardResult.newBadges.length > 0) {
+        badgesEl.innerHTML = rewardResult.newBadges.map(b =>
+          `<div title="${b.descriptionEn}" style="display:flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.3);font-size:0.85rem;">
+            <span style="font-size:1.1rem;">${b.icon}</span>
+            <span style="font-weight:700;color:#FFD700;">${b.nameEn}</span>
+          </div>`
+        ).join('');
+        // Trigger celebration for badge earn
+        showCelebration(isKidMode);
+      }
+
+      // Level up
+      const lvlEl = document.getElementById('levelUpDisplay');
+      if (lvlEl && rewardResult.levelUp) {
+        lvlEl.textContent = `🆙 Level Up! You're now Level ${rewardResult.newLevel}!`;
+        lvlEl.style.display = 'inline-block';
+      }
+
+      if (rewardResult.xpGained > 0 || (rewardResult.newBadges && rewardResult.newBadges.length > 0)) {
+        section.style.display = 'block';
+      }
+
+      // Wire up Supabase achievements save
+      if (!Auth.useDemoMode && getSupabase() && Auth.currentUser && rewardResult.newBadges?.length > 0) {
+        (async () => {
+          const client = getSupabase();
+          const rows = rewardResult.newBadges.map(b => ({
+            user_id: Auth.currentUser.id,
+            badge_id: b.id,
+            badge_name: b.nameEn,
+            earned_at: new Date().toISOString()
+          }));
+          try {
+            await client.from('achievements').upsert(rows, { onConflict: 'user_id,badge_id' });
+          } catch (_) {}
+        })();
+      }
+    }
+
+    function showXPPopAnimation(xp) {
+      const el = document.createElement('div');
+      el.className = 'xp-pop';
+      el.textContent = `+${xp} XP`;
+      // Position near the score area
+      el.style.left = '50%';
+      el.style.top = '40%';
+      el.style.transform = 'translateX(-50%)';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 1500);
+    }
+
+    function showCelebration(kidMode) {
+      const overlay = document.getElementById('celebrationOverlay');
+      if (!overlay) return;
+      overlay.innerHTML = '';
+      overlay.style.display = 'block';
+
+      const colors = kidMode
+        ? ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6BD6','#FF9A3C']
+        : ['#7B2FF7','#00D4FF','#FF2D95','#00FF88','#FFD700','#FF6B35'];
+
+      const count = kidMode ? 60 : 40;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'confetti-particle';
+        p.style.left = Math.random() * 100 + 'vw';
+        p.style.top = '-15px';
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        p.style.width = (Math.random() * 8 + 6) + 'px';
+        p.style.height = (Math.random() * 8 + 6) + 'px';
+        p.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        const duration = (Math.random() * 2 + 1.5);
+        const delay = Math.random() * 1.5;
+        p.style.animationDuration = duration + 's';
+        p.style.animationDelay = delay + 's';
+        overlay.appendChild(p);
+      }
+
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.innerHTML = '';
+      }, 4000);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Solution popup helpers ────────────────────────────────────────────────
+
+    function _trackFailure(phoneme, score) {
+      if (!phoneme || score >= 70) return; // not really a failure
+      if (phoneme === _failPhoneme) {
+        _failStreak++;
+      } else {
+        _failPhoneme = phoneme;
+        _failStreak = 1;
+      }
+      if (_failStreak >= FAIL_THRESHOLD) {
+        _failStreak = 0; // reset so we don't re-trigger immediately
+        showSolutionPopup(phoneme);
+      }
+    }
+
+    function showSolutionPopup(phoneme) {
+      const popup = document.getElementById('solutionPopup');
+      if (!popup) return;
+
+      // Populate content
+      document.getElementById('spStruggleLabel').textContent =
+        isKidMode ? '😊 Let me help you!' : 'HAVING TROUBLE?';
+      document.getElementById('spPhoneme').textContent = phoneme;
+
+      // Try PhonemeGuide first (Bengali), fall back to generic English tips
+      const guide = (typeof PhonemeGuide !== 'undefined') ? PhonemeGuide.getGuide(phoneme) : null;
+      if (guide) {
+        document.getElementById('spPhonemeLabel').textContent =
+          guide.nameEn ? `"${guide.nameEn}" — ${guide.example || ''}` : phoneme;
+
+        const tip = (practiceLanguage === 'bn') ? (guide.tip || guide.tipEn) : (guide.tipEn || guide.tip);
+        document.getElementById('spTip').textContent = tip || '';
+
+        // Mouth details grid
+        const mp = guide.mouthPosition || {};
+        const detailItems = [
+          mp.lipsEn && ['👄 Lips', mp.lipsEn],
+          mp.tongueEn && ['👅 Tongue', mp.tongueEn],
+          mp.airflowEn && ['💨 Airflow', mp.airflowEn]
+        ].filter(Boolean);
+        document.getElementById('spMouthDetails').innerHTML = detailItems.map(([label, val]) =>
+          `<div style="background:rgba(255,255,255,0.04);padding:6px 8px;border-radius:8px;">
+            <div style="color:rgba(255,255,255,0.4);font-size:0.7rem;margin-bottom:2px;">${label}</div>
+            <div style="color:rgba(255,255,255,0.8);">${val}</div>
+          </div>`
+        ).join('');
+
+        // Adapt mouth SVG: open wider for open vowels, narrow for fricatives
+        _adaptMouthSvg(guide);
+
+        // Common mistake
+        const mistakeEl = document.getElementById('spMistake');
+        if (guide.commonMistake) {
+          mistakeEl.textContent = '⚠️ Common mistake: ' + guide.commonMistake;
+          mistakeEl.style.display = 'block';
+        } else {
+          mistakeEl.style.display = 'none';
+        }
+      } else {
+        // English phoneme — generic guidance
+        document.getElementById('spPhonemeLabel').textContent = 'Focus sound';
+        document.getElementById('spTip').textContent =
+          'Listen carefully to the target sound. Place your tongue and lips correctly, then try again slowly.';
+        document.getElementById('spMouthDetails').innerHTML = '';
+        document.getElementById('spMistake').style.display = 'none';
+      }
+
+      // Show popup
+      popup.style.display = 'flex';
+    }
+
+    function _adaptMouthSvg(guide) {
+      const lipsEn = (guide.mouthPosition?.lipsEn || '').toLowerCase();
+      const lowerLip = document.getElementById('spLowerLip');
+      const tongue = document.getElementById('spTongue');
+      if (!lowerLip) return;
+      if (lipsEn.includes('open wide') || lipsEn.includes('wide')) {
+        // Wide open mouth
+        lowerLip.setAttribute('d', 'M15,30 Q35,60 60,58 Q85,60 105,30');
+        tongue.setAttribute('cy', '50'); tongue.setAttribute('ry', '6');
+      } else if (lipsEn.includes('round') || lipsEn.includes('rounded')) {
+        // Rounded lips (like ও/উ)
+        lowerLip.setAttribute('d', 'M28,32 Q35,48 60,50 Q85,48 92,32');
+        tongue.setAttribute('cy', '43'); tongue.setAttribute('ry', '5');
+      } else if (lipsEn.includes('spread') || lipsEn.includes('corners')) {
+        // Spread lips (like ই/এ)
+        lowerLip.setAttribute('d', 'M10,30 Q35,42 60,43 Q85,42 110,30');
+        tongue.setAttribute('cy', '38'); tongue.setAttribute('ry', '4');
+      } else {
+        // Default / neutral
+        lowerLip.setAttribute('d', 'M15,30 Q35,50 60,50 Q85,50 105,30');
+        tongue.setAttribute('cy', '42'); tongue.setAttribute('ry', '6');
+      }
+      const tongueEn = (guide.mouthPosition?.tongueEn || '').toLowerCase();
+      if (tongueEn.includes('front') || tongueEn.includes('high')) {
+        tongue.setAttribute('cx', '55'); tongue.setAttribute('rx', '12');
+      } else if (tongueEn.includes('back') || tongueEn.includes('low back')) {
+        tongue.setAttribute('cx', '65'); tongue.setAttribute('rx', '18');
+      } else {
+        tongue.setAttribute('cx', '60'); tongue.setAttribute('rx', '15');
+      }
+    }
+
+    function hearSolutionPhoneme() {
+      const phoneme = document.getElementById('spPhoneme').textContent;
+      if (!phoneme || !window.speechSynthesis) return;
+
+      // Cancel any ongoing speech first
+      window.speechSynthesis.cancel();
+
+      const utt = new SpeechSynthesisUtterance(phoneme);
+      utt.lang = practiceLanguage === 'bn' ? 'bn-IN' : 'en-US';
+      utt.rate = 0.75;  // slow for clarity
+      utt.pitch = isKidMode ? 1.2 : 1.0;
+      utt.volume = 1.0;
+      window.speechSynthesis.speak(utt);
+
+      // Brief visual feedback
+      const btn = document.getElementById('spHearBtn');
+      if (btn) {
+        btn.textContent = '🔊 Playing...';
+        utt.onend = () => { btn.textContent = '🔊 Hear it'; };
+      }
+    }
+
+    function closeSolutionPopup() {
+      const popup = document.getElementById('solutionPopup');
+      if (popup) popup.style.display = 'none';
+      window.speechSynthesis?.cancel();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     function updateStats(score) {
       document.getElementById('lastScore').textContent = score;
@@ -1436,6 +1798,8 @@
       AudioEngine.stopVisualization();
       SpeechAPI.stop();
       GameEngine.stop();
+      closeSolutionPopup(); // dismiss solution popup if it's open
+      _failStreak = 0; _failPhoneme = ''; // reset failure tracking
 
       const accuracy = totalAttempts > 0 ? Math.round((totalCorrect / totalAttempts) * 100) : 0;
       const score = GameEngine.score;
@@ -1448,7 +1812,76 @@
       buildDetailedResults();
       document.getElementById('sessionOverlay').classList.add('active');
 
+      // ── Rewards ──────────────────────────────────────────────────────────
+      if (typeof RewardSystem !== 'undefined') {
+        // Build phoneme scores map for reward system
+        const phonemeScoresMap = {};
+        (GameEngine.attempts || []).forEach(a => {
+          if (a.target) {
+            const sc = a.phoneticScore != null ? a.phoneticScore : Math.round((a.confidence || 0) * 100);
+            if (!phonemeScoresMap[a.target] || sc > phonemeScoresMap[a.target]) {
+              phonemeScoresMap[a.target] = sc;
+            }
+          }
+        });
+
+        const rewardResult = RewardSystem.recordSession({
+          words: totalAttempts,
+          correct: totalCorrect,
+          attempts: totalAttempts,
+          score: accuracy,
+          duration: practiceDuration,
+          phonemeScores: phonemeScoresMap,
+          streakCorrect: 0  // simplified — could track in-session streak separately
+        });
+
+        showSessionRewards(rewardResult, accuracy);
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
       debugLog(`📊 Session ended — Score: ${score}, Accuracy: ${accuracy}%, Level: ${level}`, 'info');
+
+      // ── Phoneme gap tracking ──────────────────────────────────────────────────
+      const attempts = GameEngine.attempts || [];
+      const phonemeTargets = [...new Set(attempts.map(a => a.target).filter(Boolean))];
+
+      // Record each attempt in TherapyEngine (SM-2 spaced repetition, saves to lexisai_therapy_data)
+      attempts.forEach(a => {
+        if (a.target) {
+          const sc = a.phoneticScore != null ? a.phoneticScore : Math.round((a.confidence || 0) * 100);
+          TherapyEngine.recordAttempt(a.target, sc, sc >= 70);
+        }
+      });
+
+      // Build per-phoneme summary and merge into lexisai_phoneme_progress for fast dashboard reads
+      const byPhoneme = {};
+      attempts.forEach(a => {
+        if (!a.target) return;
+        if (!byPhoneme[a.target]) byPhoneme[a.target] = { scores: [], attempts: 0, correct: 0 };
+        const sc = a.phoneticScore != null ? a.phoneticScore : Math.round((a.confidence || 0) * 100);
+        byPhoneme[a.target].scores.push(sc);
+        byPhoneme[a.target].attempts++;
+        if (sc >= 70) byPhoneme[a.target].correct++;
+      });
+
+      const phonemeProgress = JSON.parse(localStorage.getItem('lexisai_phoneme_progress') || '{}');
+      Object.entries(byPhoneme).forEach(([phoneme, data]) => {
+        const sessionAvg = Math.round(data.scores.reduce((s, v) => s + v, 0) / data.scores.length);
+        const prev = phonemeProgress[phoneme] || { attempts: 0, correct: 0, bestScore: 0, avgScore: 0 };
+        const totalAttemptsSoFar = prev.attempts + data.attempts;
+        phonemeProgress[phoneme] = {
+          phoneme,
+          language: practiceLanguage,
+          attempts: totalAttemptsSoFar,
+          correct: prev.correct + data.correct,
+          bestScore: Math.max(prev.bestScore || 0, ...data.scores),
+          // Weighted average across all sessions
+          avgScore: Math.round(((prev.avgScore * prev.attempts) + (sessionAvg * data.attempts)) / totalAttemptsSoFar),
+          lastPracticed: new Date().toISOString()
+        };
+      });
+      localStorage.setItem('lexisai_phoneme_progress', JSON.stringify(phonemeProgress));
+      // ─────────────────────────────────────────────────────────────────────────
 
       try {
         const history = JSON.parse(localStorage.getItem('lexisai_session_history') || '[]');
@@ -1458,7 +1891,10 @@
           language: practiceLanguage,
           duration_minutes: practiceDuration,
           accuracy_score: accuracy,
+          phoneme_targets: phonemeTargets,
           score, level,
+          correct_count: totalCorrect,
+          total_attempts: totalAttempts,
           mode: isLocalMode ? 'local' : 'online',
           completed: true
         });
@@ -1472,8 +1908,27 @@
             language: practiceLanguage,
             duration_minutes: practiceDuration,
             accuracy_score: accuracy,
+            phoneme_targets: phonemeTargets,
+            score,
+            correct_count: totalCorrect,
+            total_attempts: totalAttempts,
             completed: true
           });
+
+          // Upsert per-phoneme progress to Supabase (merge with existing rows via UNIQUE constraint)
+          const progressRows = Object.values(phonemeProgress).map(p => ({
+            user_id: Auth.currentUser.id,
+            phoneme: p.phoneme,
+            language: p.language,
+            attempts: p.attempts,
+            correct: p.correct,
+            best_score: p.bestScore,
+            last_practiced: p.lastPracticed
+          }));
+          if (progressRows.length > 0) {
+            await client.from('phoneme_progress').upsert(progressRows, { onConflict: 'user_id,phoneme,language' });
+          }
+
           await Auth.incrementDailyUsage();
         }
       } catch (e) {

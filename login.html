@@ -72,9 +72,14 @@
         <button type="submit" class="btn btn-primary" style="width:100%;" id="loginBtn" data-i18n="login_button">Log In</button>
       </form>
 
+      <!-- Email Confirmation Warning -->
+      <div id="emailConfirmWarning" style="display:none;margin-top:1rem;padding:1rem;border-radius:10px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.25);font-size:0.85rem;color:rgba(255,255,255,0.8);text-align:center;">
+        📧 <strong>Email not confirmed yet.</strong> Check your inbox (and spam folder) for the confirmation link.
+      </div>
+
       <!-- Demo mode notice -->
       <div id="demoNotice" style="display:none;margin-top:1rem;padding:0.75rem;border-radius:10px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);font-size:0.8rem;color:rgba(255,255,255,0.6);text-align:center;">
-        🔧 Demo Mode: Accounts are stored locally on this device. Data will be lost if browser storage is cleared.
+        🔧 Demo Mode: Accounts are stored locally on this device.
       </div>
 
       <div class="auth-footer">
@@ -87,6 +92,7 @@
   <div class="toast-container"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/i18n.js"></script>
@@ -94,10 +100,14 @@
   <script src="js/subscription.js"></script>
 
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       initSupabase();
       i18n.init();
-      Auth.init();
+
+      // AWAIT auth init — no more race conditions
+      await Auth.init();
+
+      console.log('%c[LOGIN] Auth ready. currentUser:', 'color:#00FF88;', Auth.currentUser?.email || 'none');
 
       // Show/hide UI based on demo mode
       if (Auth.isDemoMode()) {
@@ -107,16 +117,32 @@
         document.getElementById('demoNotice').style.display = 'block';
       }
 
-      // If already logged in, redirect
+      // If already logged in, redirect smartly
       if (Auth.currentUser) {
-        window.location.href = 'dashboard.html';
+        if (Auth.needsOnboarding()) {
+          console.log('%c[LOGIN] Needs onboarding → redirecting', 'color:#FFD700;');
+          window.location.href = 'onboarding.html';
+        } else {
+          console.log('%c[LOGIN] Already logged in → dashboard', 'color:#00FF88;');
+          window.location.href = 'dashboard.html';
+        }
+        return; // STOP
+      }
+
+      // Check URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('confirmed') === 'true') {
+        Utils.showToast('Email confirmed! You can now log in.', 'success');
+      }
+      if (urlParams.get('reset') === 'true') {
+        Utils.showToast('Check your email for a password reset link.', 'info');
       }
     });
 
     async function handleDemoLogin() {
       const result = await Auth.demoQuickLogin();
       if (result.success) {
-        Utils.showToast('Demo mode activated! Explore the app freely.', 'success');
+        Utils.showToast('Demo mode activated!', 'success');
         setTimeout(() => window.location.href = 'onboarding.html', 500);
       }
     }
@@ -134,7 +160,17 @@
     function handleForgotPassword() {
       if (Auth.isDemoMode()) {
         Utils.showToast('In Demo Mode, just create a new account.', 'info');
+        return;
       }
+      const email = document.getElementById('loginEmail').value;
+      if (!email) {
+        Utils.showToast('Enter your email first, then click Forgot Password.', 'info');
+        return;
+      }
+      Auth.resetPassword(email).then(result => {
+        if (result.error) Utils.showToast(result.error, 'error');
+        else Utils.showToast('Password reset link sent! Check your email.', 'success');
+      });
     }
 
     async function handleLogin(e) {
@@ -146,15 +182,29 @@
       btn.innerHTML = '<div class="spinner"></div>';
       btn.disabled = true;
 
+      console.log('%c[LOGIN] Attempting:', 'color:#7B47F6;', email);
+
       const result = await Auth.signIn(email, password);
+
+      console.log('%c[LOGIN] Result:', 'color:#7B47F6;', result);
 
       if (result.error) {
         Utils.showToast(result.error, 'error');
         btn.textContent = i18n.t('login_button');
         btn.disabled = false;
+
+        if (result.needsConfirmation) {
+          document.getElementById('emailConfirmWarning').style.display = 'block';
+        }
       } else {
         Utils.showToast('Welcome back!', 'success');
-        setTimeout(() => window.location.href = 'dashboard.html', 500);
+
+        // Smart redirect
+        if (Auth.needsOnboarding()) {
+          setTimeout(() => window.location.href = 'onboarding.html', 500);
+        } else {
+          setTimeout(() => window.location.href = 'dashboard.html', 500);
+        }
       }
     }
   </script>

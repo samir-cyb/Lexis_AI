@@ -404,6 +404,8 @@ const SpeechAPI = {
   },
 
   // Transcribe audio using Gemini API
+  // Routes through Supabase Edge Function when available,
+  // falls back to direct Gemini API call in demo mode
   async _transcribeWithGemini() {
     if (this.geminiTranscribing) return;
 
@@ -433,8 +435,96 @@ const SpeechAPI = {
       const base64Audio = await this._blobToBase64(blob);
 
       const langCode = this.currentLanguage.startsWith('bn') ? 'Bengali' : 'English';
-      const prompt = `Transcribe the following audio in ${langCode}. Return ONLY the transcribed text, nothing else. If the audio is unclear or empty, return an empty string. Do not add any explanation or formatting.`;
 
+      // Check if Supabase is configured — use Edge Function if so
+      const supabaseAvailable = typeof getSupabase === 'function' && getSupabase() !== null;
+      let text = '';
+      let source = 'gemini';
+
+      if (supabaseAvailable) {
+        // === Route through Supabase Edge Function (API key stays server-side) ===
+        this.log(`🔮 Routing via Supabase Edge Function...`, 'debug');
+
+        const edgeFunctionUrl = `${SUPABASE_URL}/functions/v1/gemini-transcribe`;
+        const supabase = getSupabase();
+
+        const response = await fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            audio: base64Audio,
+            language: langCode,
+            mime_type: 'audio/webm'
+          })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          this.log(`Edge Function error: ${response.status} — ${errText.substring(0, 200)}`, 'error');
+
+          // Fall back to direct API call if Edge Function fails
+          this.log(`🔮 Falling back to direct Gemini API call...`, 'warn');
+          const fallbackResult = await this._transcribeWithGeminiDirect(base64Audio, langCode);
+          text = fallbackResult.text;
+          source = fallbackResult.source;
+        } else {
+          const data = await response.json();
+          text = data.text || '';
+          source = data.source || 'gemini';
+          this.log(`🔮 Edge Function responded successfully`, 'debug');
+        }
+      } else {
+        // === Demo mode: direct Gemini API call (key from localStorage) ===
+        this.log(`🔮 Demo mode — calling Gemini API directly...`, 'debug');
+        const result = await this._transcribeWithGeminiDirect(base64Audio, langCode);
+        text = result.text;
+        source = result.source;
+      }
+
+      if (text && text.length > 0) {
+        this.lastDetectedText = text;
+        this.log(`🔮 GEMINI HEARD: "${text}"`, 'success');
+
+        // Reset fail count on success
+        this.geminiFailCount = 0;
+
+        if (this.onResult) {
+          this.onResult({
+            final: text,
+            interim: '',
+            confidence: 0.85,
+            isFinal: true,
+            locale: this.currentLanguage,
+            source: source
+          });
+        }
+      } else {
+        this.log('Gemini: No speech detected in audio chunk', 'debug');
+      }
+
+    } catch (e) {
+      this.log(`Gemini transcription error: ${e.message}`, 'error');
+      this.geminiFailCount++;
+      if (this.geminiFailCount >= this.maxGeminiFails) {
+        this.useGemini = false;
+        this._stopGeminiInterval();
+        this.switchToLocalMode();
+      }
+    }
+
+    this.geminiTranscribing = false;
+  },
+
+  // Direct Gemini API call — used as fallback when Edge Function is unavailable
+  // (demo mode or Edge Function error)
+  async _transcribeWithGeminiDirect(base64Audio, langCode) {
+    const prompt = `Transcribe the following audio in ${langCode}. Return ONLY the transcribed text, nothing else. If the audio is unclear or empty, return an empty string. Do not add any explanation or formatting.`;
+
+    try {
       const response = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${this.geminiModel}:generateContent?key=${this.geminiApiKey}`,
         {
@@ -462,56 +552,34 @@ const SpeechAPI = {
 
       if (!response.ok) {
         const errText = await response.text();
-        this.log(`Gemini API error: ${response.status} — ${errText.substring(0, 200)}`, 'error');
+        this.log(`Gemini direct API error: ${response.status} — ${errText.substring(0, 200)}`, 'error');
 
         this.geminiFailCount++;
-
-        // If Gemini fails multiple times, fall back to local mode
         if (this.geminiFailCount >= this.maxGeminiFails) {
           this.log(`Gemini failed ${this.geminiFailCount} times — switching to local mode`, 'warn');
           this.useGemini = false;
           this._stopGeminiInterval();
           this.switchToLocalMode();
         }
-        this.geminiTranscribing = false;
-        return;
+        return { text: '', source: 'gemini-direct' };
       }
 
       // Reset fail count on success
       this.geminiFailCount = 0;
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-
-      if (text && text.length > 0) {
-        this.lastDetectedText = text;
-        this.log(`🔮 GEMINI HEARD: "${text}"`, 'success');
-
-        if (this.onResult) {
-          this.onResult({
-            final: text,
-            interim: '',
-            confidence: 0.85,
-            isFinal: true,
-            locale: this.currentLanguage,
-            source: 'gemini'
-          });
-        }
-      } else {
-        this.log('Gemini: No speech detected in audio chunk', 'debug');
-      }
-
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      return { text, source: 'gemini-direct' };
     } catch (e) {
-      this.log(`Gemini transcription error: ${e.message}`, 'error');
+      this.log(`Gemini direct API error: ${e.message}`, 'error');
       this.geminiFailCount++;
       if (this.geminiFailCount >= this.maxGeminiFails) {
         this.useGemini = false;
         this._stopGeminiInterval();
         this.switchToLocalMode();
       }
+      return { text: '', source: 'gemini-direct' };
     }
-
-    this.geminiTranscribing = false;
   },
 
   // Convert blob to base64

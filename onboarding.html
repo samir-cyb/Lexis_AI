@@ -15,7 +15,6 @@
 </head>
 <body class="mature-theme">
 
-  <!-- Background Effects -->
   <div style="position:fixed;inset:0;z-index:0;">
     <div class="hero-gradient-orb orb1" style="opacity:0.2;"></div>
     <div class="hero-gradient-orb orb2" style="opacity:0.15;"></div>
@@ -23,7 +22,6 @@
 
   <div class="onboarding-page">
     <div class="onboarding-card">
-      <!-- Logo -->
       <div style="text-align:center;margin-bottom:1.5rem;">
         <a href="index.html" class="nav-logo" style="justify-content:center;">
           <div class="nav-logo-icon">🎙</div>
@@ -31,20 +29,19 @@
         </a>
       </div>
 
-      <!-- Progress -->
       <div class="onboarding-progress">
         <div class="onboarding-progress-dot active" id="dot1"></div>
         <div class="onboarding-progress-dot" id="dot2"></div>
         <div class="onboarding-progress-dot" id="dot3"></div>
       </div>
 
-      <!-- Step 1: Age Selection -->
+      <!-- Step 1: Age Selection (REQUIRED) -->
       <div class="onboarding-step active" id="step1">
         <div style="text-align:center;margin-bottom:2rem;">
           <h2 data-i18n="onboard_welcome">Welcome to LexisAI!</h2>
           <p style="color:rgba(255,255,255,0.5);margin-top:0.5rem;" data-i18n="onboard_age_title">How old are you?</p>
+          <p style="color:rgba(255,165,0,0.7);margin-top:0.25rem;font-size:0.85rem;">(Required — this sets your theme)</p>
         </div>
-
         <div class="option-grid cols-2">
           <div class="option-card" data-age="kid" onclick="selectAge('kid', this)">
             <div class="option-icon">🧒</div>
@@ -57,7 +54,6 @@
             <p>Professional exercises</p>
           </div>
         </div>
-
         <div style="text-align:center;margin-top:2rem;">
           <button class="btn btn-primary" onclick="nextStep(2)" id="step1Next">Continue</button>
         </div>
@@ -69,7 +65,6 @@
           <h2 data-i18n="onboard_lang_title">Choose your language</h2>
           <p style="color:rgba(255,255,255,0.5);">You can practice in both languages later</p>
         </div>
-
         <div class="option-grid cols-2">
           <div class="option-card selected" data-lang="en" onclick="selectLanguage('en', this)">
             <div class="option-icon">🇬🇧</div>
@@ -82,7 +77,6 @@
             <p>বাংলা ফোনিম ও অনুশীলন</p>
           </div>
         </div>
-
         <div style="display:flex;gap:1rem;margin-top:2rem;justify-content:center;">
           <button class="btn btn-secondary" onclick="prevStep(1)">Back</button>
           <button class="btn btn-primary" onclick="nextStep(3)">Continue</button>
@@ -95,7 +89,6 @@
           <h2 data-i18n="onboard_duration_title">How long do you want to practice?</h2>
           <p style="color:rgba(255,255,255,0.5);">You can change this anytime</p>
         </div>
-
         <div class="option-grid cols-4">
           <div class="option-card" data-duration="2" onclick="selectDuration(2, this)">
             <div class="option-icon">⚡</div>
@@ -114,7 +107,6 @@
             <h4 data-i18n="onboard_duration_5">5 min</h4>
           </div>
         </div>
-
         <div style="display:flex;gap:1rem;margin-top:2rem;justify-content:center;">
           <button class="btn btn-secondary" onclick="prevStep(2)">Back</button>
           <button class="btn btn-primary btn-lg" onclick="completeOnboarding()" id="onboardComplete" data-i18n="onboard_continue">Let's Go!</button>
@@ -127,6 +119,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="js/env-config.js"></script>
   <script src="js/supabase-config.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/i18n.js"></script>
@@ -137,25 +130,45 @@
     let selectedLang = 'en';
     let selectedDuration = 3;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       initSupabase();
       i18n.init();
-      Auth.init();
 
-      // Require auth (works in both demo and Supabase mode)
+      // AWAIT auth init — no more race conditions
+      await Auth.init();
+
+      console.log('%c[ONBOARDING] Auth ready. currentUser:', 'color:#00FF88;', Auth.currentUser?.email || 'none');
+      console.log('%c[ONBOARDING] Profile:', 'color:#7B47F6;', Auth.userProfile);
+
+      // Require auth
       if (!Auth.currentUser) {
+        console.log('%c[ONBOARDING] No user → login', 'color:#FFD700;');
         window.location.href = 'login.html';
         return;
       }
 
+      // If already onboarded, skip to dashboard
+      if (Auth.userProfile?.onboarding_completed) {
+        console.log('%c[ONBOARDING] Already done → dashboard', 'color:#00FF88;');
+        window.location.href = 'dashboard.html';
+        return;
+      }
+
+      // Pre-fill from existing profile
+      if (Auth.userProfile) {
+        if (Auth.userProfile.language_preference) {
+          selectedLang = Auth.userProfile.language_preference;
+        }
+        if (Auth.userProfile.age !== null && Auth.userProfile.age !== undefined) {
+          selectedAge = Auth.userProfile.age < 10 ? 'kid' : 'mature';
+          const card = document.querySelector(`#step1 .option-card[data-age="${selectedAge}"]`);
+          if (card) card.classList.add('selected');
+        }
+      }
+
       // Entrance animation
       if (typeof gsap !== 'undefined') {
-        gsap.from('.onboarding-card', {
-          scale: 0.95,
-          opacity: 0,
-          duration: 0.6,
-          ease: 'power3.out'
-        });
+        gsap.from('.onboarding-card', { scale: 0.95, opacity: 0, duration: 0.6, ease: 'power3.out' });
       }
     });
 
@@ -179,68 +192,64 @@
 
     function nextStep(step) {
       if (step === 2 && !selectedAge) {
-        Utils.showToast('Please select your age group', 'warning');
+        Utils.showToast('Please select your age group!', 'warning');
         return;
       }
-
       document.querySelectorAll('.onboarding-step').forEach(s => s.classList.remove('active'));
       document.getElementById('step' + step).classList.add('active');
-
-      // Update progress dots
       for (let i = 1; i <= 3; i++) {
         const dot = document.getElementById('dot' + i);
         dot.classList.remove('active', 'completed');
         if (i < step) dot.classList.add('completed');
         if (i === step) dot.classList.add('active');
       }
-
-      // Animate step
-      gsap.from('#step' + step, {
-        x: 30,
-        opacity: 0,
-        duration: 0.4,
-        ease: 'power3.out'
-      });
+      if (typeof gsap !== 'undefined') {
+        gsap.from('#step' + step, { x: 30, opacity: 0, duration: 0.4, ease: 'power3.out' });
+      }
     }
 
     function prevStep(step) {
       document.querySelectorAll('.onboarding-step').forEach(s => s.classList.remove('active'));
       document.getElementById('step' + step).classList.add('active');
-
       for (let i = 1; i <= 3; i++) {
         const dot = document.getElementById('dot' + i);
         dot.classList.remove('active', 'completed');
         if (i < step) dot.classList.add('completed');
         if (i === step) dot.classList.add('active');
       }
-
-      gsap.from('#step' + step, {
-        x: -30,
-        opacity: 0,
-        duration: 0.4,
-        ease: 'power3.out'
-      });
+      if (typeof gsap !== 'undefined') {
+        gsap.from('#step' + step, { x: -30, opacity: 0, duration: 0.4, ease: 'power3.out' });
+      }
     }
 
     async function completeOnboarding() {
+      if (!selectedAge) {
+        Utils.showToast('Please select your age group first!', 'warning');
+        return;
+      }
+
       const btn = document.getElementById('onboardComplete');
       btn.innerHTML = '<div class="spinner"></div>';
       btn.disabled = true;
 
-      // Save onboarding data
-      const ageValue = selectedAge === 'kid' ? 7 : 20; // Representative ages
+      const ageValue = selectedAge === 'kid' ? 7 : 20;
       const themeValue = selectedAge === 'kid' ? 'kid' : 'mature';
+
+      console.log('%c[ONBOARDING] Completing with:', 'color:#00FF88;', { age: ageValue, theme: themeValue, language: selectedLang });
 
       await i18n.setLanguage(selectedLang);
 
       const result = await Auth.updateUserProfile({
         age: ageValue,
         language_preference: selectedLang,
-        theme: themeValue
+        theme: themeValue,
+        onboarding_completed: true
       });
 
       Utils.setLocal('practice_duration', selectedDuration);
       Utils.setLocal('theme', themeValue);
+
+      console.log('%c[ONBOARDING] Update result:', 'color:#7B47F6;', result);
 
       if (result.success || !result.error) {
         Utils.showToast('Profile set up! Welcome to LexisAI!', 'success');

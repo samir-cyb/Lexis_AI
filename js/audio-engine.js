@@ -176,9 +176,14 @@ const AudioEngine = {
       const dpr = window.devicePixelRatio || 1;
       const width = Math.floor(rect.width);
       const height = Math.floor(rect.height) || 120;
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
+      // Use Math.round to avoid non-integer physW/H (e.g. dpr=1.5, width=501 → 751.5)
+      // which caused canvas.width (751) to never equal 751.5 → ctx.scale accumulated on every resize
+      const physW = Math.round(width * dpr);
+      const physH = Math.round(height * dpr);
+      if (canvas.width !== physW || canvas.height !== physH) {
+        canvas.width = physW;
+        canvas.height = physH;
+        // canvas.width assignment resets the context transform — re-apply DPR scale once
         const ctx = canvas.getContext('2d');
         if (ctx) ctx.scale(dpr, dpr);
       }

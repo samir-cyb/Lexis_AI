@@ -196,7 +196,8 @@ const RLEngine = {
   // Generate next exercise based on RL decision
   generateExercise(action, userProfile, sessionHistory) {
     const language = userProfile.language_preference || 'en';
-    const isKid = userProfile.age < 10;
+    const age = userProfile.age != null ? userProfile.age : 99; // null age → treat as adult
+    const isKid = age < 10;
     const weakPhonemes = this.identifyWeakPhonemes(sessionHistory);
 
     const exercisePool = this.getExercisePool(language, isKid);
@@ -258,7 +259,12 @@ const RLEngine = {
   },
 
   pickEasier(pool, history) {
-    return { type: 'phoneme', target: pool.vowels[0], category: 'vowel', difficulty: 'easy', speed: 'slow' };
+    // Pick a random vowel, avoiding recently seen ones so the child isn't stuck on the same sound
+    const recentTargets = (history || []).slice(-5).flatMap(s => s.phoneme_targets || []);
+    const candidates = pool.vowels.filter(v => !recentTargets.includes(v));
+    const vowelPool = candidates.length > 0 ? candidates : pool.vowels;
+    const target = vowelPool[Math.floor(Math.random() * vowelPool.length)];
+    return { type: 'phoneme', target, category: 'vowel', difficulty: 'easy', speed: 'slow' };
   },
 
   pickByCategory(pool, category) {

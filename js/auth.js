@@ -1,40 +1,90 @@
 // ============================================
 // LexisAI — Authentication System
-// Works with Supabase Auth OR Local Demo Mode
+// v3 — Fixed: race condition causing infinite reload loop
+// Key change: Auth.init() is now async and uses getSession()
+// Pages MUST await Auth.init() before checking Auth.currentUser
 // ============================================
 
 const Auth = {
   currentUser: null,
   userProfile: null,
-  useDemoMode: false, // Auto-detected
+  useDemoMode: false,
+  _initialized: false,
 
-  // Demo accounts stored in localStorage
   DEMO_KEY: 'lexisai_demo_accounts',
   SESSION_KEY: 'lexisai_demo_session',
 
-  init() {
-    // Check if Supabase is available
+  // ==========================================
+  // DEBUG LOGGERS
+  // ==========================================
+  _debug(...args) {
+    const ts = new Date().toLocaleTimeString();
+    console.log(`%c[AUTH ${ts}]`, 'color:#7B47F6;font-weight:bold;', ...args);
+  },
+
+  _error(...args) {
+    const ts = new Date().toLocaleTimeString();
+    console.error(`%c[AUTH ERR ${ts}]`, 'color:#FF2D55;font-weight:bold;', ...args);
+  },
+
+  // ==========================================
+  // INIT — now returns a Promise
+  // Must be awaited before checking Auth.currentUser
+  // ==========================================
+  async init() {
     const client = getSupabase();
-    
+
     if (client) {
-      // Supabase mode
+      this._debug('Supabase mode — getting session...');
+
+      // STEP 1: Get current session immediately (no callback delay)
+      try {
+        const { data: { session }, error } = await client.auth.getSession();
+
+        if (error) {
+          this._error('getSession error:', error.message);
+        } else if (session?.user) {
+          this.currentUser = session.user;
+          this._debug('Session found:', session.user.id.substring(0, 8) + '...');
+          await this.loadUserProfile();
+          this._debug('Profile loaded — theme:', this.userProfile?.theme, 'age:', this.userProfile?.age);
+        } else {
+          this._debug('No active session');
+        }
+      } catch (e) {
+        this._error('getSession exception:', e.message);
+      }
+
+      // STEP 2: Listen for future auth changes (login, logout, signup)
       client.auth.onAuthStateChange(async (event, session) => {
-        console.log('Auth state changed:', event);
+        this._debug('Auth state changed:', event, session ? session.user?.id?.substring(0, 8) + '...' : 'no session');
+
+        // Skip INITIAL_SESSION — we already handled it above via getSession()
+        if (event === 'INITIAL_SESSION') {
+          this._debug('Skipping INITIAL_SESSION (already handled)');
+          return;
+        }
+
         if (session?.user) {
           this.currentUser = session.user;
           await this.loadUserProfile();
+          this._debug('Profile after state change — theme:', this.userProfile?.theme);
           this.onSignedIn();
         } else {
           this.currentUser = null;
           this.userProfile = null;
+          this._debug('User signed out');
           this.onSignedOut();
         }
       });
+
+      this._initialized = true;
     } else {
-      // Demo mode — check for existing session
+      // Demo mode
       this.useDemoMode = true;
-      console.log('%c🔧 LexisAI running in Demo Mode (no Supabase)', 'color:#FFD700;font-weight:bold;');
+      this._debug('Demo Mode (no Supabase)');
       this.loadDemoSession();
+      this._initialized = true;
     }
   },
 
@@ -55,6 +105,7 @@ const Auth = {
       const session = JSON.parse(raw);
       this.currentUser = session.user;
       this.userProfile = session.profile;
+      this._debug('Demo session restored:', session.user?.email);
     }
   },
 
@@ -72,11 +123,26 @@ const Auth = {
 
   // ========== SIGN UP ==========
 
+  // ========== PASSWORD HASHING (Demo Mode) ==========
+  // Uses Web Crypto SHA-256 with random salt — much better than plaintext
+
+  async _generateSalt() {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+  },
+
+  async _hashPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(salt + password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+  },
+
   async signUp(email, password, displayName) {
     // Demo mode
     if (this.useDemoMode || !getSupabase()) {
       const accounts = this.getDemoAccounts();
-      
       if (accounts[email]) {
         return { error: 'An account with this email already exists' };
       }
@@ -93,49 +159,76 @@ const Auth = {
         id: userId,
         email: email,
         display_name: displayName,
-        age: 20,
+        age: null,
         language_preference: 'en',
-        theme: 'mature',
+        theme: null,
         subscription_status: 'free',
         daily_exercises_used: 0,
         last_exercise_date: null,
         created_at: new Date().toISOString()
       };
 
-      // Save account
-      accounts[email] = { password, user, profile };
+      const salt = await this._generateSalt();
+      const hash = await this._hashPassword(password, salt);
+      accounts[email] = { hash, salt, user, profile };
       this.saveDemoAccounts(accounts);
-
-      // Auto-login
       this.saveDemoSession(user, profile);
-      
+      this._debug('Demo signup OK:', email);
       return { success: true, user };
     }
 
+    // ==========================================
     // Supabase mode
+    // ==========================================
     const client = getSupabase();
     if (!client) return { error: 'Supabase not initialized' };
 
     try {
+      this._debug('Supabase signUp starting:', email);
+
       const { data, error } = await client.auth.signUp({
         email,
         password,
-        options: { data: { display_name: displayName } }
+        options: {
+          data: { display_name: displayName },
+          emailRedirectTo: window.location.origin + '/login.html'
+        }
       });
 
-      if (error) return { error: error.message };
+      if (error) {
+        this._error('Supabase signUp error:', error.message);
+        return { error: error.message };
+      }
 
-      if (data.user) {
-        await client.from('users').insert({
-          id: data.user.id,
-          email: email,
-          display_name: displayName,
-          subscription_status: 'free'
-        });
+      // Email confirmation required (no session returned)
+      if (data.user && !data.session) {
+        this._debug('Email confirmation required');
+        return {
+          success: true,
+          needsConfirmation: true,
+          message: 'Check your email! We sent a confirmation link to ' + email,
+          user: data.user
+        };
+      }
+
+      // Auto-confirmed — session exists
+      if (data.user && data.session) {
+        this.currentUser = data.user;
+        this._debug('Auto-confirmed signup, user ID:', data.user.id);
+
+        // Wait for the SQL trigger to create the profile row
+        await new Promise(r => setTimeout(r, 800));
+
+        // Load the profile (trigger should have created it)
+        await this.loadUserProfile();
+
+        this._debug('After signup — profile:', this.userProfile ? 'found' : 'NOT found');
+        return { success: true, user: data.user };
       }
 
       return { success: true, user: data.user };
     } catch (e) {
+      this._error('SignUp exception:', e.message);
       return { error: e.message };
     }
   },
@@ -147,16 +240,17 @@ const Auth = {
     if (this.useDemoMode || !getSupabase()) {
       const accounts = this.getDemoAccounts();
       const account = accounts[email];
-
-      if (!account) {
-        return { error: 'No account found with this email. Please sign up first.' };
-      }
-
-      if (account.password !== password) {
+      if (!account) return { error: 'No account found with this email. Please sign up first.' };
+      // Support both new hashed format and legacy plaintext (backwards compat)
+      if (account.hash && account.salt) {
+        const hash = await this._hashPassword(password, account.salt);
+        if (hash !== account.hash) return { error: 'Incorrect password' };
+      } else if (account.password !== password) {
         return { error: 'Incorrect password' };
       }
 
       this.saveDemoSession(account.user, account.profile);
+      this._debug('Demo signIn OK:', email);
       return { success: true, user: account.user };
     }
 
@@ -165,15 +259,36 @@ const Auth = {
     if (!client) return { error: 'Supabase not initialized' };
 
     try {
+      this._debug('Supabase signIn:', email);
+
       const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (error) return { error: error.message };
+
+      if (error) {
+        this._error('signIn error:', error.message);
+        if (error.message.includes('Email not confirmed') || error.message.includes('email')) {
+          return {
+            error: 'Please confirm your email first. Check your inbox (and spam folder) for the confirmation link.',
+            needsConfirmation: true
+          };
+        }
+        if (error.message.includes('Invalid login credentials')) {
+          return { error: 'Wrong email or password. Please try again.' };
+        }
+        return { error: error.message };
+      }
+
+      this.currentUser = data.user;
+      await this.loadUserProfile();
+
+      this._debug('signIn OK — profile:', this.userProfile ? 'found' : 'NOT found');
       return { success: true, user: data.user };
     } catch (e) {
+      this._error('signIn exception:', e.message);
       return { error: e.message };
     }
   },
 
-  // ========== QUICK DEMO LOGIN (no credentials needed) ==========
+  // ========== QUICK DEMO LOGIN ==========
 
   async demoQuickLogin() {
     const userId = 'demo-quick-' + Date.now();
@@ -188,9 +303,9 @@ const Auth = {
       id: userId,
       email: 'demo@lexisai.app',
       display_name: 'Demo User',
-      age: 20,
+      age: null,
       language_preference: 'en',
-      theme: 'mature',
+      theme: null,
       subscription_status: 'free',
       daily_exercises_used: 0,
       last_exercise_date: null,
@@ -198,6 +313,7 @@ const Auth = {
     };
 
     this.saveDemoSession(user, profile);
+    this._debug('Demo quick login OK');
     return { success: true, user };
   },
 
@@ -209,7 +325,7 @@ const Auth = {
       return { error: 'Google sign-in requires Supabase. Use Demo Mode instead.' };
     }
     try {
-      const { data, error } = await client.auth.signInWithOAuth({
+      const { error } = await client.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: window.location.origin + '/dashboard.html' }
       });
@@ -226,7 +342,7 @@ const Auth = {
       return { error: 'GitHub sign-in requires Supabase. Use Demo Mode instead.' };
     }
     try {
-      const { data, error } = await client.auth.signInWithOAuth({
+      const { error } = await client.auth.signInWithOAuth({
         provider: 'github',
         options: { redirectTo: window.location.origin + '/dashboard.html' }
       });
@@ -240,22 +356,23 @@ const Auth = {
   // ========== SIGN OUT ==========
 
   async signOut() {
-    // Demo mode
     if (this.useDemoMode || !getSupabase()) {
       this.clearDemoSession();
       window.location.href = 'index.html';
       return;
     }
 
-    // Supabase mode
     const client = getSupabase();
     if (client) {
       try {
         await client.auth.signOut();
+        this._debug('Signed out from Supabase');
       } catch (e) {
-        console.error('Sign out error:', e);
+        this._error('Sign out error:', e);
       }
     }
+    this.currentUser = null;
+    this.userProfile = null;
     localStorage.removeItem('lexisai_user_profile');
     window.location.href = 'index.html';
   },
@@ -263,44 +380,78 @@ const Auth = {
   // ========== LOAD PROFILE ==========
 
   async loadUserProfile() {
-    // Demo mode
-    if (this.useDemoMode || !getSupabase()) {
-      // Profile is already loaded in demo session
+    if (this.useDemoMode || !getSupabase()) return;
+
+    const client = getSupabase();
+    if (!client || !this.currentUser) {
+      this._debug('loadUserProfile: no client or no currentUser');
       return;
     }
 
-    const client = getSupabase();
-    if (!client || !this.currentUser) return;
-
     try {
-      const { data } = await client
+      this._debug('Loading profile for:', this.currentUser.id.substring(0, 8) + '...');
+
+      const { data, error } = await client
         .from('users')
         .select('*')
         .eq('id', this.currentUser.id)
-        .single();
+        .maybeSingle();
+
+      if (error) {
+        this._error('loadUserProfile DB error:', error.message);
+        return;
+      }
 
       if (data) {
         this.userProfile = data;
         localStorage.setItem('lexisai_user_profile', JSON.stringify(data));
+        this._debug('Profile loaded — theme:', data.theme, 'age:', data.age, 'onboarding:', data.onboarding_completed);
+      } else {
+        this._debug('No profile row found — creating one...');
+
+        try {
+          const { data: newProfile, error: insertErr } = await client
+            .from('users')
+            .insert({
+              id: this.currentUser.id,
+              email: this.currentUser.email,
+              display_name: this.currentUser.user_metadata?.display_name ||
+                            this.currentUser.email.split('@')[0],
+              subscription_status: 'free',
+              theme: null,
+              age: null
+            })
+            .select()
+            .single();
+
+          if (insertErr) {
+            this._error('Emergency profile insert FAILED:', insertErr.message);
+          } else {
+            this.userProfile = newProfile;
+            localStorage.setItem('lexisai_user_profile', JSON.stringify(newProfile));
+            this._debug('Emergency profile created OK');
+          }
+        } catch (e) {
+          this._error('Emergency profile insert exception:', e.message);
+        }
       }
     } catch (e) {
-      console.error('Load profile error:', e);
+      this._error('loadUserProfile exception:', e.message);
     }
   },
 
   // ========== UPDATE PROFILE ==========
 
   async updateUserProfile(updates) {
-    // Demo mode
     if (this.useDemoMode || !getSupabase()) {
       if (this.userProfile) {
         this.userProfile = { ...this.userProfile, ...updates, updated_at: new Date().toISOString() };
         this.saveDemoSession(this.currentUser, this.userProfile);
+        this._debug('Demo profile updated:', updates);
       }
       return { success: true, profile: this.userProfile };
     }
 
-    // Supabase mode
     const client = getSupabase();
     if (!client || !this.currentUser) return { error: 'Not authenticated' };
 
@@ -312,11 +463,17 @@ const Auth = {
         .select()
         .single();
 
-      if (error) return { error: error.message };
+      if (error) {
+        this._error('updateProfile DB error:', error.message);
+        return { error: error.message };
+      }
+
       this.userProfile = data;
       localStorage.setItem('lexisai_user_profile', JSON.stringify(data));
+      this._debug('Profile updated — theme:', data.theme, 'age:', data.age);
       return { success: true, profile: data };
     } catch (e) {
+      this._error('updateProfile exception:', e.message);
       return { error: e.message };
     }
   },
@@ -386,7 +543,12 @@ const Auth = {
   },
 
   getTheme() {
+    if (!this.userProfile?.theme) return null;
     return this.isKid() ? 'kid' : 'mature';
+  },
+
+  needsOnboarding() {
+    return !this.userProfile?.theme || this.userProfile?.age === null || this.userProfile?.age === undefined;
   },
 
   isDemoMode() {
@@ -398,6 +560,7 @@ const Auth = {
 
   requireAuth() {
     if (!this.currentUser) {
+      this._debug('requireAuth: no user → login');
       window.location.href = 'login.html';
       return false;
     }

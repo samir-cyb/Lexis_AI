@@ -20,6 +20,9 @@ node_modules/
 .env.local
 .env.production
 
+# LexisAI local credentials — NEVER commit this file
+js/env-config.js
+
 # Build output
 dist/
 build/
