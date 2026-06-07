@@ -240,7 +240,10 @@ const Auth = {
     if (this.useDemoMode || !getSupabase()) {
       const accounts = this.getDemoAccounts();
       const account = accounts[email];
-      if (!account) return { error: 'No account found with this email. Please sign up first.' };
+      if (!account) return {
+        error: 'Demo Mode: No local account found for this email. ' +
+               'If you signed up via Supabase, reload the page — Demo Mode means Supabase is not connected.'
+      };
       // Support both new hashed format and legacy plaintext (backwards compat)
       if (account.hash && account.salt) {
         const hash = await this._hashPassword(password, account.salt);
@@ -264,17 +267,26 @@ const Auth = {
       const { data, error } = await client.auth.signInWithPassword({ email, password });
 
       if (error) {
-        this._error('signIn error:', error.message);
-        if (error.message.includes('Email not confirmed') || error.message.includes('email')) {
+        this._error('signIn error:', error.message, '| code:', error.status);
+        // Supabase v2: unconfirmed email
+        const msg = error.message || '';
+        if (
+          msg.includes('Email not confirmed') ||
+          msg.includes('email_not_confirmed') ||
+          (error.status === 400 && msg.toLowerCase().includes('confirm'))
+        ) {
           return {
             error: 'Please confirm your email first. Check your inbox (and spam folder) for the confirmation link.',
             needsConfirmation: true
           };
         }
-        if (error.message.includes('Invalid login credentials')) {
+        if (msg.includes('Invalid login credentials') || msg.includes('invalid_credentials')) {
           return { error: 'Wrong email or password. Please try again.' };
         }
-        return { error: error.message };
+        if (msg.includes('User not found') || msg.includes('user_not_found')) {
+          return { error: 'No account found with this email in Supabase. Please sign up first.' };
+        }
+        return { error: msg || 'Login failed. Please try again.' };
       }
 
       this.currentUser = data.user;

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Learn Sounds — LexisAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Comic+Neue:wght@700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mature-theme.css">
+  <link rel="stylesheet" href="css/kid-theme.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+  <style>
+    /* ── Page layout ── */
+    .learn-page { padding: 100px 0 60px; min-height: 100vh; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 28px; align-items: center;
+    }
+    .filter-btn {
+      padding: 8px 20px; border-radius: 50px; border: none;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.65);
+      transition: all 0.2s;
+    }
+    .filter-btn.active {
+      background: var(--primary); color: #fff;
+      box-shadow: 0 0 16px rgba(123,71,246,0.4);
+    }
+    .filter-btn:hover { background: rgba(255,255,255,0.12); color:#fff; }
+    .filter-btn.active:hover { background: var(--primary); }
+
+    /* ── Phoneme grid ── */
+    .phoneme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    /* ── Phoneme card ── */
+    .phoneme-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 20px 16px;
+      cursor: pointer;
+      transition: all 0.22s;
+      position: relative;
+      overflow: hidden;
+    }
+    .phoneme-card:hover {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(123,71,246,0.4);
+      transform: translateY(-2px);
+    }
+    .phoneme-card.has-progress { border-color: rgba(0,255,136,0.25); }
+
+    .phoneme-char {
+      font-size: 2.8rem; font-weight: 800; line-height: 1;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .phoneme-en { font-size: 0.82rem; opacity: 0.5; margin-bottom: 8px; }
+    .phoneme-example {
+      font-size: 1rem; opacity: 0.75; margin-bottom: 10px;
+      font-weight: 500;
+    }
+    .difficulty-badge {
+      display: inline-block; padding: 2px 10px; border-radius: 50px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .diff-easy  { background: rgba(0,255,136,0.12); color: #00FF88; }
+    .diff-medium{ background: rgba(255,215,0,0.12);  color: #FFD700; }
+    .diff-hard  { background: rgba(255,45,95,0.12);  color: #FF2D5F; }
+
+    /* Progress bar inside card */
+    .card-progress-bar {
+      margin-top: 10px; height: 4px; border-radius: 4px;
+      background: rgba(255,255,255,0.06); overflow: hidden;
+    }
+    .card-progress-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #00FF88, #00D4FF);
+      transition: width 0.4s ease;
+    }
+    .card-progress-label {
+      font-size: 0.7rem; opacity: 0.5; margin-top: 4px;
+    }
+
+    /* Play button */
+    .card-play-btn {
+      position: absolute; top: 14px; right: 14px;
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(123,71,246,0.2); border: 1px solid rgba(123,71,246,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
+    }
+    .card-play-btn:hover { background: rgba(123,71,246,0.5); transform: scale(1.1); }
+
+    /* ── Detail modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 900;
+      background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+    .modal-card {
+      background: #1a1025; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 24px; padding: 36px 32px;
+      width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+      transform: translateY(20px); transition: transform 0.25s;
+      position: relative;
+    }
+    .modal-overlay.open .modal-card { transform: translateY(0); }
+
+    .modal-close {
+      position: absolute; top: 18px; right: 18px;
+      background: rgba(255,255,255,0.08); border: none; border-radius: 50%;
+      width: 36px; height: 36px; font-size: 1.1rem; cursor: pointer;
+      color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.18); color: #fff; }
+
+    .modal-phoneme-char {
+      font-size: 4.5rem; font-weight: 900; line-height: 1;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .modal-subtitle { opacity: 0.5; font-size: 0.95rem; margin-bottom: 24px; }
+
+    .modal-section {
+      background: rgba(255,255,255,0.04); border-radius: 14px;
+      padding: 16px 18px; margin-bottom: 14px;
+    }
+    .modal-section h4 {
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; opacity: 0.45; margin: 0 0 10px;
+    }
+    .modal-section p { margin: 0; line-height: 1.55; opacity: 0.8; }
+
+    /* Mouth illustration */
+    .mouth-svg-wrap { text-align: center; margin: 6px 0 14px; }
+    .mouth-svg-wrap svg { width: 120px; height: 80px; }
+
+    /* Mouth position grid */
+    .mouth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mouth-item label { font-size: 0.72rem; opacity: 0.45; display: block; margin-bottom: 2px; }
+    .mouth-item span { font-size: 0.88rem; opacity: 0.8; }
+
+    /* Play button in modal */
+    .modal-play-btn {
+      display: flex; align-items: center; gap: 10px; justify-content: center;
+      width: 100%; padding: 14px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: #fff; font-size: 1rem; font-weight: 700; cursor: pointer;
+      margin-top: 6px; transition: all 0.2s;
+    }
+    .modal-play-btn:hover { transform: scale(1.02); filter: brightness(1.1); }
+
+    /* Practice link */
+    .modal-practice-btn {
+      display: flex; align-items: center; gap: 8px; justify-content: center;
+      width: 100%; padding: 12px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.75);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      margin-top: 10px; text-decoration: none; transition: all 0.2s;
+    }
+    .modal-practice-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+    /* Section header */
+    .section-heading {
+      font-size: 1.1rem; font-weight: 700; opacity: 0.55;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin: 32px 0 14px;
+    }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; opacity: 0.5; }
+    .empty-state .big-emoji { font-size: 3rem; margin-bottom: 12px; }
+
+    /* Kid mode overrides */
+    body.kid-theme .phoneme-char { font-size: 3.4rem; }
+    body.kid-theme .phoneme-card { border-radius: 20px; }
+    body.kid-theme .filter-btn { font-size: 1rem; padding: 10px 22px; }
+  </style>
+</head>
+<body class="mature-theme">
+
+  <!-- Navigation -->
+  <nav class="navbar scrolled">
+    <div class="container">
+      <a href="index.html" class="nav-logo">
+        <div class="nav-logo-icon">🎙</div>
+        <span data-i18n="app_name">LexisAI</span>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="dashboard.html" data-i18n="nav_dashboard">Dashboard</a></li>
+        <li><a href="practice.html" data-i18n="practice_title">Practice</a></li>
+        <li><a href="learning.html" class="active">📖 Learn Sounds</a></li>
+        <li><a href="profile.html" data-i18n="nav_profile">Profile</a></li>
+        <li><a href="#" onclick="Auth.signOut()">Log Out</a></li>
+      </ul>
+      <div class="nav-actions">
+        <button class="lang-switch active" data-lang="en">EN</button>
+        <button class="lang-switch" data-lang="bn">বাং</button>
+        <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Page content -->
+  <div class="learn-page">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="margin-bottom:28px;">
+        <h1 style="font-size:2rem;font-weight:800;margin-bottom:6px;">
+          📖 Learn Bengali Sounds
+        </h1>
+        <p id="pageSubtitle" style="opacity:0.55;font-size:1rem;">
+          Tap any card to see how to pronounce it — mouth position, tips, and audio.
+        </p>
+      </div>
+
+      <!-- Filter bar -->
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="setFilter('all', this)">All</button>
+        <button class="filter-btn" onclick="setFilter('vowel', this)">স্বরবর্ণ — Vowels</button>
+        <button class="filter-btn" onclick="setFilter('consonant', this)">ব্যঞ্জনবর্ণ — Consonants</button>
+        <button class="filter-btn" onclick="setFilter('easy', this)">⭐ Easy</button>
+        <button class="filter-btn" onclick="setFilter('medium', this)">⭐⭐ Medium</button>
+        <button class="filter-btn" onclick="setFilter('hard', this)">⭐⭐⭐ Hard</button>
+        <button class="filter-btn" onclick="setFilter('needs_work', this)">🔴 Needs Work</button>
+      </div>
+
+      <!-- Grid -->
+      <div class="phoneme-grid" id="phonemeGrid">
+        <!-- populated by JS -->
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="big-emoji">🔍</div>
+        <p>No phonemes match this filter.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Detail modal -->
+  <div class="modal-overlay" id="detailModal" onclick="handleModalClick(event)">
+    <div class="modal-card" id="modalCard">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+
+      <div id="modalPhonemeChar" class="modal-phoneme-char">আ</div>
+      <div id="modalSubtitle" class="modal-subtitle">"a" · Vowel · Example: আম</div>
+
+      <!-- Mouth guide -->
+      <div class="modal-section">
+        <h4>🫦 Mouth Position</h4>
+        <div class="mouth-svg-wrap" id="mouthSvgWrap"></div>
+        <div class="mouth-grid">
+          <div class="mouth-item">
+            <label>Lips</label>
+            <span id="modalLips">—</span>
+          </div>
+          <div class="mouth-item">
+            <label>Tongue</label>
+            <span id="modalTongue">—</span>
+          </div>
+          <div class="mouth-item" style="grid-column:span 2;">
+            <label>Airflow</label>
+            <span id="modalAirflow">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tip -->
+      <div class="modal-section">
+        <h4>💡 How to Say It</h4>
+        <p id="modalTip" style="font-size:1.05rem;"></p>
+        <p id="modalTipBn" style="font-size:0.92rem;margin-top:6px;opacity:0.65;"></p>
+      </div>
+
+      <!-- Common mistake (if any) -->
+      <div class="modal-section" id="modalMistakeSection" style="display:none;">
+        <h4>⚠️ Common Mistake</h4>
+        <p id="modalMistake"></p>
+      </div>
+
+      <!-- Progress (if any) -->
+      <div class="modal-section" id="modalProgressSection" style="display:none;">
+        <h4>📊 Your Progress</h4>
+        <div class="card-progress-bar" style="height:8px;margin-bottom:6px;">
+          <div class="card-progress-fill" id="modalProgressFill" style="width:0%"></div>
+        </div>
+        <p id="modalProgressText" style="font-size:0.85rem;opacity:0.6;"></p>
+      </div>
+
+      <!-- Play button -->
+      <button class="modal-play-btn" id="modalPlayBtn" onclick="playCurrentPhoneme()">
+        🔊 Hear It Out Loud
+      </button>
+
+      <!-- Practice link -->
+      <a class="modal-practice-btn" id="modalPracticeBtn" href="practice.html">
+        🎮 Practice This Sound
+      </a>
+    </div>
+  </div>
+
+  <div class="toast-container"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/env-config.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/i18n.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/phoneme-guide.js"></script>
+
+  <script>
+    // ─────────────────────────────────────────────────────────────────────────
+    // INIT
+    // ─────────────────────────────────────────────────────────────────────────
+    let progress = {};       // { phoneme: { avgScore, attempts } }
+    let currentPhoneme = null;
+    let currentFilter = 'all';
+    let currentLang = 'bn'; // TTS language
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      initSupabase();
+      i18n.init();
+      await Auth.init();
+
+      // Apply theme
+      const profile = Auth.userProfile;
+      if (profile?.theme === 'kid' || (profile?.age && profile.age < 10)) {
+        document.body.classList.replace('mature-theme', 'kid-theme');
+        document.getElementById('pageSubtitle').textContent =
+          '🌟 Tap a sound to learn how to say it! 🎉';
+      }
+
+      // Load progress from localStorage
+      try {
+        const raw = localStorage.getItem('lexisai_phoneme_progress');
+        const arr = raw ? JSON.parse(raw) : [];
+        arr.forEach(p => { progress[p.phoneme] = p; });
+      } catch (e) {}
+
+      renderGrid('all');
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FILTER
+    // ─────────────────────────────────────────────────────────────────────────
+    function setFilter(filter, btn) {
+      currentFilter = filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderGrid(filter);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDER GRID
+    // ─────────────────────────────────────────────────────────────────────────
+    function renderGrid(filter) {
+      const grid = document.getElementById('phonemeGrid');
+      const empty = document.getElementById('emptyState');
+      grid.innerHTML = '';
+
+      const allPhonemes = Object.entries(PhonemeGuide.phonemes);
+      let shown = 0;
+
+      // Group vowels first, then consonants
+      const vowels    = allPhonemes.filter(([,d]) => d.type === 'vowel');
+      const consonants= allPhonemes.filter(([,d]) => d.type === 'consonant');
+      const ordered   = [...vowels, ...consonants];
+
+      for (const [phoneme, data] of ordered) {
+        if (!matchesFilter(phoneme, data, filter)) continue;
+
+        const p = progress[phoneme];
+        const hasProgress = p && p.attempts >= 1;
+        const avgScore = hasProgress ? (p.avgScore || 0) : null;
+        const needsWork = hasProgress && avgScore < 60;
+
+        const diffClass = data.difficulty === 'easy' ? 'diff-easy'
+                        : data.difficulty === 'hard'  ? 'diff-hard'
+                        : 'diff-medium';
+        const diffLabel = data.difficulty === 'easy' ? '⭐ Easy'
+                        : data.difficulty === 'hard'  ? '⭐⭐⭐ Hard'
+                        : '⭐⭐ Medium';
+
+        const progressHtml = hasProgress ? `
+          <div class="card-progress-bar">
+            <div class="card-progress-fill" style="width:${avgScore}%"></div>
+          </div>
+          <div class="card-progress-label">${avgScore}% avg · ${p.attempts} attempts</div>
+        ` : '';
+
+        const card = document.createElement('div');
+        card.className = `phoneme-card${hasProgress ? ' has-progress' : ''}`;
+        card.innerHTML = `
+          <button class="card-play-btn" title="Hear this sound"
+            onclick="playPhoneme(event, '${phoneme}', '${data.type}')">🔊</button>
+          <div class="phoneme-char">${phoneme}</div>
+          <div class="phoneme-en">"${data.nameEn || ''}"</div>
+          <div class="phoneme-example">e.g. ${data.example || ''}</div>
+          <span class="difficulty-badge ${diffClass}">${diffLabel}</span>
+          ${progressHtml}
+        `;
+        card.addEventListener('click', () => openModal(phoneme, data));
+        grid.appendChild(card);
+        shown++;
+      }
+
+      empty.style.display = shown === 0 ? 'block' : 'none';
+    }
+
+    function matchesFilter(phoneme, data, filter) {
+      if (filter === 'all') return true;
+      if (filter === 'vowel')    return data.type === 'vowel';
+      if (filter === 'consonant')return data.type === 'consonant';
+      if (filter === 'easy')     return data.difficulty === 'easy';
+      if (filter === 'medium')   return data.difficulty === 'medium';
+      if (filter === 'hard')     return data.difficulty === 'hard';
+      if (filter === 'needs_work') {
+        const p = progress[phoneme];
+        return p && p.attempts >= 1 && (p.avgScore || 0) < 60;
+      }
+      return true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MODAL
+    // ─────────────────────────────────────────────────────────────────────────
+    function openModal(phoneme, data) {
+      currentPhoneme = phoneme;
+      currentLang = data.type === 'vowel' ? 'bn' : 'bn';
+
+      document.getElementById('modalPhonemeChar').textContent = phoneme;
+      document.getElementById('modalSubtitle').textContent =
+        `"${data.nameEn || ''}" · ${data.type === 'vowel' ? 'Vowel (স্বরবর্ণ)' : 'Consonant (ব্যঞ্জনবর্ণ)'} · Example: ${data.example || ''}`;
+
+      // Mouth illustration
+      renderMouthSvg(data);
+
+      // Mouth position
+      const mp = data.mouthPosition || {};
+      document.getElementById('modalLips').textContent    = mp.lipsEn    || '—';
+      document.getElementById('modalTongue').textContent  = mp.tongueEn  || '—';
+      document.getElementById('modalAirflow').textContent = mp.airflowEn || '—';
+
+      // Tips
+      document.getElementById('modalTip').textContent   = data.tipEn || '';
+      document.getElementById('modalTipBn').textContent = data.tip   || '';
+
+      // Common mistake
+      const mistakeSection = document.getElementById('modalMistakeSection');
+      if (data.commonMistake) {
+        document.getElementById('modalMistake').textContent = data.commonMistake;
+        mistakeSection.style.display = 'block';
+      } else {
+        mistakeSection.style.display = 'none';
+      }
+
+      // Progress
+      const p = progress[phoneme];
+      const progSection = document.getElementById('modalProgressSection');
+      if (p && p.attempts >= 1) {
+        const avg = p.avgScore || 0;
+        document.getElementById('modalProgressFill').style.width = avg + '%';
+        document.getElementById('modalProgressText').textContent =
+          `${avg}% average accuracy · ${p.attempts} attempts · Best: ${p.bestScore || 0}%`;
+        progSection.style.display = 'block';
+      } else {
+        progSection.style.display = 'none';
+      }
+
+      // Practice link
+      document.getElementById('modalPracticeBtn').href =
+        `practice.html?phoneme=${encodeURIComponent(phoneme)}`;
+
+      document.getElementById('detailModal').classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.remove('open');
+      currentPhoneme = null;
+      window.speechSynthesis.cancel();
+    }
+
+    function handleModalClick(e) {
+      if (e.target === document.getElementById('detailModal')) closeModal();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MOUTH SVG — three variants
+    // ─────────────────────────────────────────────────────────────────────────
+    function renderMouthSvg(data) {
+      const wrap = document.getElementById('mouthSvgWrap');
+      const lipsEn = (data.mouthPosition?.lipsEn || '').toLowerCase();
+
+      let svgContent = '';
+      if (lipsEn.includes('open wide') || lipsEn.includes('wide')) {
+        // Wide-open mouth
+        svgContent = `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="60" cy="40" rx="50" ry="28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+          <path d="M10,40 Q60,80 110,40" fill="#5a2020" stroke="rgba(255,100,100,0.5)" stroke-width="1.5"/>
+          <ellipse cx="60" cy="60" rx="32" ry="12" fill="#c43c3c" opacity="0.8"/>
+          <ellipse cx="60" cy="58" rx="24" ry="8" fill="#8B0000" opacity="0.5"/>
+          <text x="60" y="24" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">↔ wide open</text>
+        </svg>`;
+      } else if (lipsEn.includes('round')) {
+        // Rounded lips
+        svgContent = `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="60" cy="40" rx="50" ry="28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+          <ellipse cx="60" cy="40" rx="18" ry="18" fill="#5a2020" stroke="rgba(255,100,100,0.5)" stroke-width="1.5"/>
+          <ellipse cx="60" cy="44" rx="12" ry="10" fill="#c43c3c" opacity="0.8"/>
+          <text x="60" y="24" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">● rounded</text>
+        </svg>`;
+      } else {
+        // Smile-like / spread lips
+        svgContent = `<svg viewBox="0 0 120 80" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="60" cy="40" rx="50" ry="28" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+          <path d="M20,40 Q60,48 100,40" fill="#5a2020" stroke="rgba(255,100,100,0.5)" stroke-width="1.5"/>
+          <ellipse cx="60" cy="42" rx="28" ry="5" fill="#c43c3c" opacity="0.7"/>
+          <text x="60" y="24" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="10">⟺ spread</text>
+        </svg>`;
+      }
+      wrap.innerHTML = svgContent;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TTS PLAYBACK
+    // ─────────────────────────────────────────────────────────────────────────
+    function playPhoneme(evt, phoneme, type) {
+      evt.stopPropagation();
+      speakPhoneme(phoneme);
+    }
+
+    function playCurrentPhoneme() {
+      if (!currentPhoneme) return;
+      speakPhoneme(currentPhoneme);
+    }
+
+    function speakPhoneme(phoneme) {
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(phoneme);
+      utter.lang = 'bn-IN';
+      utter.rate = 0.65;
+      utter.pitch = 1.1;
+      utter.volume = 1.0;
+      window.speechSynthesis.speak(utter);
+    }
+
+    // Keyboard: Escape closes modal
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeModal();
+    });
+  </script>
+</body>
+</html>

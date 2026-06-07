@@ -77,9 +77,12 @@
         📧 <strong>Email not confirmed yet.</strong> Check your inbox (and spam folder) for the confirmation link.
       </div>
 
-      <!-- Demo mode notice -->
-      <div id="demoNotice" style="display:none;margin-top:1rem;padding:0.75rem;border-radius:10px;background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.2);font-size:0.8rem;color:rgba(255,255,255,0.6);text-align:center;">
-        🔧 Demo Mode: Accounts are stored locally on this device.
+      <!-- Demo mode notice — shown prominently when Supabase is unavailable -->
+      <div id="demoNotice" style="display:none;margin-top:1rem;padding:1rem;border-radius:12px;background:rgba(255,165,0,0.12);border:2px solid rgba(255,165,0,0.5);font-size:0.85rem;color:rgba(255,255,255,0.85);text-align:center;">
+        ⚠️ <strong>Demo Mode Active</strong><br>
+        <span style="font-size:0.78rem;opacity:0.8;">Supabase is not connected — your cloud account can't be accessed here.<br>
+        This usually means the Supabase library failed to load. Check your internet connection and <a href="" onclick="location.reload();return false;" style="color:#FFD700;">reload the page</a>.<br>
+        Accounts stored in Demo Mode are <em>local to this device only</em>.</span>
       </div>
 
       <div class="auth-footer">
@@ -101,12 +104,23 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
+      // ── Supabase library guard ───────────────────────────────────────────────
+      if (typeof supabase === 'undefined') {
+        console.error('%c[LOGIN] ⚠️ Supabase CDN library NOT LOADED — falling back to demo mode', 'color:#FF5555;font-weight:bold;');
+        console.error('%c[LOGIN] Check your internet connection or try opening the page in a browser with internet access', 'color:#FF5555;');
+      } else {
+        console.log('%c[LOGIN] ✅ Supabase library loaded. window.LEXIS_CONFIG:', 'color:#00FF88;', window.LEXIS_CONFIG ? 'found' : 'MISSING!');
+        console.log('%c[LOGIN] SUPABASE_CONFIGURED:', 'color:#00FF88;', typeof SUPABASE_CONFIGURED !== 'undefined' ? SUPABASE_CONFIGURED : 'variable not found');
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       initSupabase();
       i18n.init();
 
       // AWAIT auth init — no more race conditions
       await Auth.init();
 
+      console.log('%c[LOGIN] Auth ready. mode:', 'color:#00FF88;', Auth.isDemoMode() ? '🔧 DEMO' : '✅ SUPABASE');
       console.log('%c[LOGIN] Auth ready. currentUser:', 'color:#00FF88;', Auth.currentUser?.email || 'none');
 
       // Show/hide UI based on demo mode

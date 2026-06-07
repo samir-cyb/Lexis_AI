@@ -517,6 +517,7 @@
   <div class="practice-nav">
     <div class="practice-nav-left">
       <a href="dashboard.html" class="btn btn-icon btn-secondary" style="width:36px;height:36px;font-size:1rem;">←</a>
+      <a href="learning.html" class="btn btn-secondary" style="font-size:0.8rem;padding:6px 12px;">📖 Learn</a>
       <span style="font-weight:700;font-size:0.9rem;" id="gameTitle">Practice</span>
       <span class="mode-badge local" id="modeBadge">LOCAL</span>
     </div>
@@ -828,6 +829,9 @@
     let _failStreak = 0;       // how many consecutive failures on current phoneme
     let _failPhoneme = '';     // which phoneme is failing
     const FAIL_THRESHOLD = 3;  // show popup after this many consecutive failures
+    // ── STT priority — suppress local formant when browser STT is working ────
+    let _lastSttTime = 0;      // timestamp of last browser STT result
+    const STT_PRIORITY_MS = 2500; // suppress local results for 2.5 s after STT fires
     // ────────────────────────────────────────────────────────────────────────
     let sessionTimer = null;
     let timeRemaining = 0;
@@ -1319,6 +1323,13 @@
             isCurrentlySpeaking = false;
             const duration = voiceActivity.duration;
 
+            // ── STT priority: skip local result if browser STT fired recently ──
+            if (Date.now() - _lastSttTime < STT_PRIORITY_MS) {
+              debugLog('⏭ Local formant skipped — browser STT result was recent', 'info');
+              speechBuffer = [];
+              return;
+            }
+
             if (duration > 200 && speechBuffer.length > 3) {
               const stableFormants = AudioEngine.getStableFormants();
               const target = GameEngine.currentPhoneme || '';
@@ -1376,6 +1387,7 @@
 
     // ======== PROCESS RESULTS ========
     function processSpeechResult(text, confidence) {
+      _lastSttTime = Date.now(); // mark browser STT as active — suppress local formant for STT_PRIORITY_MS
       totalAttempts++;
       const target = GameEngine.currentTarget || '';
       const comparison = SpeechAPI.compareTexts(text, target);
